@@ -4,6 +4,9 @@
   "type": "module",
   "private": true,
   "devDependencies": {
+    "@biomejs/biome": "^2.2.4",
+    "@tscircuit/math-utils": "^0.0.25",
+    "@tscircuit/solver-utils": "^0.0.1",
     "@types/bun": "latest",
     "bun-match-svg": "^0.0.13",
     "react-cosmos": "^7.0.0",
