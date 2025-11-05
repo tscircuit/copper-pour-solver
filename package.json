@@ -1,16 +1,23 @@
 {
   "name": "copper-pour-solver",
   "module": "index.ts",
+  "scripts": {
+   "format": "biome format . --write"
+  },
   "type": "module",
   "private": true,
   "devDependencies": {
     "@biomejs/biome": "^2.2.4",
+    "@flatten-js/core": "^1.6.6",
     "@tscircuit/math-utils": "^0.0.25",
-    "@tscircuit/solver-utils": "^0.0.1",
+    "@tscircuit/solver-utils": "^0.0.3",
     "@types/bun": "latest",
     "bun-match-svg": "^0.0.13",
+    "circuit-json": "^0.0.301",
+    "circuit-to-svg": "^0.0.262",
     "react-cosmos": "^7.0.0",
     "react-cosmos-plugin-vite": "^7.0.0",
+    "tscircuit": "^0.0.863",
     "vite": "^7.1.5"
   },
   "peerDependencies": {

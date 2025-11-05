@@ -1,10 +1,14 @@
 import type { Bounds, Point } from "@tscircuit/math-utils"
+import type { BRepShape } from "circuit-json"
 
 export interface InputPourRegion {
   shape: "rect"
   layer: string
   bounds: Bounds
-  margin: number
+  outline?: Point[]
+  connectivityKey: string
+  padMargin: number
+  traceMargin: number
 }
 
 export interface BaseInputPad {
@@ -18,19 +22,25 @@ export interface InputRectPad extends BaseInputPad {
   bounds: Bounds
 }
 
+export interface InputCircularPad extends BaseInputPad {
+  shape: "circle"
+  x: number
+  y: number
+  radius: number
+}
+
 export interface InputTracePad extends BaseInputPad {
   shape: "trace"
   width: number
   segments: Point[]
 }
 
-export type InputPad = InputRectPad | InputTracePad
+export type InputPad = InputRectPad | InputCircularPad | InputTracePad
 
 export interface InputProblem {
   regionsForPour: InputPourRegion[]
   pads: InputPad[]
 }
-
 export interface PipelineOutput {
-  // b-rep shapes?
+  brep_shapes: BRepShape[]
 }
