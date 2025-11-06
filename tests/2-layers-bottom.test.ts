@@ -1,15 +1,15 @@
 import { expect, test } from "bun:test"
-import circuitJson from "./assets/circuit-2.json"
+import circuitJson from "./assets/2-layers-bottom.json"
 import { runSolverAndRenderToSvg } from "./utils/run-solver-and-render-to-svg"
 import type { AnyCircuitElement } from "circuit-json"
 
-test("circuit 2", async () => {
+test("2 layers bottom", async () => {
   const svg = runSolverAndRenderToSvg(circuitJson as AnyCircuitElement[], {
-    layer: "top",
+    layer: "bottom",
     net_name: "VCC",
-    pad_margin: 0.2,
-    trace_margin: 0.4,
+    pad_margin: 0.4,
+    trace_margin: 0.2,
   })
 
-  await expect(svg).toMatchSvgSnapshot(import.meta.path, "circuit-2")
+  await expect(svg).toMatchSvgSnapshot(import.meta.path, "2-layers-bottom")
 })
