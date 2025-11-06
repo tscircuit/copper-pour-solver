@@ -21,18 +21,22 @@ const isCircularPad = (pad: InputPad): pad is InputCircularPad =>
 export const processObstaclesForPour = (
   pads: InputPad[],
   pourConnectivityKey: string,
-  margins: { padMargin: number; traceMargin: number; boardEdgeMargin?: number },
+  margins: {
+    padMargin: number
+    traceMargin: number
+    board_edge_margin?: number
+  },
   boardOutline?: Point[],
 ): ProcessedObstacles => {
   const polygonsToSubtract: Flatten.Polygon[] = []
 
-  const { padMargin, traceMargin, boardEdgeMargin } = margins
+  const { padMargin, traceMargin, board_edge_margin } = margins
 
   if (
     boardOutline &&
     boardOutline.length > 0 &&
-    boardEdgeMargin &&
-    boardEdgeMargin > 0
+    board_edge_margin &&
+    board_edge_margin > 0
   ) {
     const boardPoly = new Flatten.Polygon(
       boardOutline.map((p) => Flatten.point(p.x, p.y)),
@@ -54,15 +58,15 @@ export const processObstaclesForPour = (
       const v2 = new Flatten.Vector(p2, p3)
       const crossProduct = v1.cross(v2)
 
-      const circle = new Flatten.Circle(p2, boardEdgeMargin)
+      const circle = new Flatten.Circle(p2, board_edge_margin)
       polygonsToSubtract.push(circleToPolygon(circle))
 
       if (crossProduct < 0) {
         const box = new Flatten.Box(
-          p2.x - boardEdgeMargin,
-          p2.y - boardEdgeMargin,
-          p2.x + boardEdgeMargin,
-          p2.y + boardEdgeMargin,
+          p2.x - board_edge_margin,
+          p2.y - board_edge_margin,
+          p2.x + board_edge_margin,
+          p2.y + board_edge_margin,
         )
         polygonsToSubtract.push(new Flatten.Polygon(box.toPoints()))
       }
@@ -78,7 +82,7 @@ export const processObstaclesForPour = (
       const segmentLength = Math.hypot(p1.x - p2.x, p1.y - p2.y)
       if (segmentLength === 0) continue
 
-      const enlargedWidth = boardEdgeMargin * 2
+      const enlargedWidth = board_edge_margin * 2
 
       const centerX = (p1.x + p2.x) / 2
       const centerY = (p1.y + p2.y) / 2

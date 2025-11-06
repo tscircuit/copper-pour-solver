@@ -28,7 +28,7 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
         {
           padMargin: region.padMargin,
           traceMargin: region.traceMargin,
-          boardEdgeMargin: region.boardEdgeMargin,
+          board_edge_margin: region.board_edge_margin,
         },
         region.outline,
       )

@@ -26,7 +26,7 @@ export const convertCircuitJsonToInputProblem = (
     pour_connectivity_key: string
     pad_margin: number
     trace_margin: number
-    boardEdgeMargin?: number
+    board_edge_margin?: number
   },
 ): InputProblem => {
   const source_ports = circuitJson.filter(
@@ -199,7 +199,7 @@ export const convertCircuitJsonToInputProblem = (
       connectivityKey: options.pour_connectivity_key,
       padMargin: options.pad_margin,
       traceMargin: options.trace_margin,
-      boardEdgeMargin: options.boardEdgeMargin ?? 0,
+      board_edge_margin: options.board_edge_margin ?? 0,
     },
   ]
 

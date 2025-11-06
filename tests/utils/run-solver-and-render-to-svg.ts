@@ -17,7 +17,7 @@ export const runSolverAndRenderToSvg = (
     net_name: string
     pad_margin: number
     trace_margin: number
-    boardEdgeMargin?: number
+    board_edge_margin?: number
   },
 ) => {
   const source_net = circuitJson.find(
