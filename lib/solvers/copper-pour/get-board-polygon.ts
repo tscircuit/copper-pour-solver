@@ -2,7 +2,7 @@ import type { InputPourRegion } from "lib/types"
 import Flatten from "@flatten-js/core"
 
 export const getBoardPolygon = (region: InputPourRegion): Flatten.Polygon => {
-  const clearance = region.clearance ?? 0
+  const boardEdgeMargin = region.boardEdgeMargin ?? 0
 
   if (region.outline && region.outline.length > 0) {
     const polygon = new Flatten.Polygon(
@@ -13,10 +13,10 @@ export const getBoardPolygon = (region: InputPourRegion): Flatten.Polygon => {
 
   const { bounds } = region
   const newBounds = {
-    minX: bounds.minX + clearance,
-    minY: bounds.minY + clearance,
-    maxX: bounds.maxX - clearance,
-    maxY: bounds.maxY - clearance,
+    minX: bounds.minX + boardEdgeMargin,
+    minY: bounds.minY + boardEdgeMargin,
+    maxX: bounds.maxX - boardEdgeMargin,
+    maxY: bounds.maxY - boardEdgeMargin,
   }
 
   if (newBounds.minX >= newBounds.maxX || newBounds.minY >= newBounds.maxY) {

@@ -9,7 +9,7 @@ test("circuit 8", async () => {
     net_name: "GND",
     pad_margin: 0.4,
     trace_margin: 0.2,
-    clearance: 1,
+    boardEdgeMargin: 1,
   })
 
   await expect(svg).toMatchSvgSnapshot(import.meta.path, "circuit-8")

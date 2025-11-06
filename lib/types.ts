@@ -9,7 +9,7 @@ export interface InputPourRegion {
   connectivityKey: string
   padMargin: number
   traceMargin: number
-  clearance?: number
+  boardEdgeMargin?: number
 }
 
 export interface BaseInputPad {
