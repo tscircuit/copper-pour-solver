@@ -28,16 +28,29 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
         {
           padMargin: region.padMargin,
           traceMargin: region.traceMargin,
+          clearance: region.clearance,
         },
+        region.outline,
       )
 
-      let pourPolygons: Flatten.Polygon = boardPolygon
+      let pourPolygons: Flatten.Polygon | Flatten.Polygon[] = boardPolygon
 
       for (const poly of polygonsToSubtract) {
-        pourPolygons = Flatten.BooleanOperations.subtract(
-          pourPolygons,
-          poly,
-        ) as Flatten.Polygon
+        const currentPolys = Array.isArray(pourPolygons)
+          ? pourPolygons
+          : [pourPolygons]
+        const nextPolys: Flatten.Polygon[] = []
+        for (const p of currentPolys) {
+          const result = Flatten.BooleanOperations.subtract(p, poly)
+          if (result) {
+            if (Array.isArray(result)) {
+              nextPolys.push(...result.filter((r) => !r.isEmpty()))
+            } else {
+              if (!result.isEmpty()) nextPolys.push(result)
+            }
+          }
+        }
+        pourPolygons = nextPolys
       }
 
       const new_breps = generateBRep(pourPolygons)
