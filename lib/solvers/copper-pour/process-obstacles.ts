@@ -3,6 +3,7 @@ import type { Point } from "@tscircuit/math-utils"
 import type {
   InputCircularPad,
   InputPad,
+  InputPolygonPad,
   InputRectPad,
   InputTracePad,
 } from "lib/types"
@@ -17,6 +18,8 @@ const isTracePad = (pad: InputPad): pad is InputTracePad =>
   pad.shape === "trace"
 const isCircularPad = (pad: InputPad): pad is InputCircularPad =>
   pad.shape === "circle"
+const isPolygonPad = (pad: InputPad): pad is InputPolygonPad =>
+  pad.shape === "polygon"
 
 export const processObstaclesForPour = (
   pads: InputPad[],
@@ -25,12 +28,13 @@ export const processObstaclesForPour = (
     padMargin: number
     traceMargin: number
     board_edge_margin?: number
+    cutoutMargin?: number
   },
   boardOutline?: Point[],
 ): ProcessedObstacles => {
   const polygonsToSubtract: Flatten.Polygon[] = []
 
-  const { padMargin, traceMargin, board_edge_margin } = margins
+  const { padMargin, traceMargin, board_edge_margin, cutoutMargin } = margins
 
   if (
     boardOutline &&
@@ -120,9 +124,21 @@ export const processObstaclesForPour = (
       continue
     }
 
+    const isHoleOrCutout =
+      pad.connectivityKey.startsWith("hole:") ||
+      pad.connectivityKey.startsWith("cutout:")
+
     if (isCircularPad(pad)) {
-      const isHole = pad.connectivityKey.startsWith("hole:")
-      const margin = isHole ? 0 : padMargin
+      const margin = isHoleOrCutout ? (cutoutMargin ?? 0) : padMargin
+      if (isHoleOrCutout) {
+        console.log(
+          `Applying cutout margin to circular pad/hole/cutout: ${pad.padId}, margin: ${margin}`,
+        )
+      } else {
+        console.log(
+          `Applying pad margin to circular pad: ${pad.padId}, margin: ${margin}`,
+        )
+      }
       const circle = new Flatten.Circle(
         new Flatten.Point(pad.x, pad.y),
         pad.radius + margin,
@@ -132,14 +148,100 @@ export const processObstaclesForPour = (
     }
 
     if (isRectPad(pad)) {
+      const margin = isHoleOrCutout ? (cutoutMargin ?? 0) : padMargin
+      if (isHoleOrCutout) {
+        console.log(
+          `Applying cutout margin to rect pad/cutout: ${pad.padId}, margin: ${margin}`,
+        )
+      } else {
+        console.log(
+          `Applying pad margin to rect pad: ${pad.padId}, margin: ${margin}`,
+        )
+      }
       const { bounds } = pad
       const b = new Flatten.Box(
-        bounds.minX - padMargin,
-        bounds.minY - padMargin,
-        bounds.maxX + padMargin,
-        bounds.maxY + padMargin,
+        bounds.minX - margin,
+        bounds.minY - margin,
+        bounds.maxX + margin,
+        bounds.maxY + margin,
       )
       polygonsToSubtract.push(new Flatten.Polygon(b.toPoints()))
+      continue
+    }
+
+    if (isPolygonPad(pad)) {
+      const margin = isHoleOrCutout ? (cutoutMargin ?? 0) : 0
+      if (isHoleOrCutout) {
+        console.log(
+          `Applying cutout margin to polygon cutout: ${pad.padId}, margin: ${margin}`,
+        )
+      }
+
+      const seen = new Set<string>()
+      const uniquePoints = pad.points.filter((p) => {
+        const key = `${p.x},${p.y}`
+        if (seen.has(key)) {
+          console.log(
+            `Duplicate point detected and removed for ${pad.padId}: (${p.x}, ${p.y})`,
+          )
+          return false
+        }
+        seen.add(key)
+        return true
+      })
+
+      if (uniquePoints.length < 3) continue
+
+      const polygon = new Flatten.Polygon(
+        uniquePoints.map((p) => Flatten.point(p.x, p.y)),
+      )
+
+      if (Math.abs(polygon.area()) < 1e-9) continue
+
+      if (margin <= 0) {
+        polygonsToSubtract.push(polygon)
+        continue
+      }
+
+      // Ensure polygon is CCW for consistent normal direction.
+      // In flatten-js, CCW corresponds to a negative area.
+      if (polygon.area() > 0) {
+        polygon.reverse()
+      }
+
+      const offsetLines: Flatten.Line[] = []
+      const polygonVertices = polygon.vertices
+      for (let i = 0; i < polygonVertices.length; i++) {
+        const p1 = polygonVertices[i]!
+        const p2 = polygonVertices[(i + 1) % polygonVertices.length]!
+
+        const segment = Flatten.segment(p1, p2)
+
+        if (segment.length === 0) continue
+
+        const line = Flatten.line(segment.start, segment.end)
+
+        // For a CCW polygon, the normal (rotated +90deg, i.e. "left") points inward.
+        // We must translate outward, so we use a negative margin.
+        const norm = line.norm
+        const offsetLine = line.translate(norm.multiply(-margin))
+        offsetLines.push(offsetLine)
+      }
+
+      const newPolygonPoints: Flatten.Point[] = []
+      for (let i = 0; i < offsetLines.length; i++) {
+        const line1 = offsetLines[i]!
+        const line2 = offsetLines[(i + 1) % offsetLines.length]!
+
+        const ip = line1.intersect(line2)
+        if (ip.length > 0) {
+          newPolygonPoints.push(ip[0]!)
+        }
+      }
+
+      if (newPolygonPoints.length >= 3) {
+        polygonsToSubtract.push(new Flatten.Polygon(newPolygonPoints))
+      }
       continue
     }
 

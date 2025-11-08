@@ -10,6 +10,7 @@ export interface InputPourRegion {
   padMargin: number
   traceMargin: number
   board_edge_margin?: number
+  cutout_margin?: number
 }
 
 export interface BaseInputPad {
@@ -36,7 +37,16 @@ export interface InputTracePad extends BaseInputPad {
   segments: Point[]
 }
 
-export type InputPad = InputRectPad | InputCircularPad | InputTracePad
+export interface InputPolygonPad extends BaseInputPad {
+  shape: "polygon"
+  points: Point[]
+}
+
+export type InputPad =
+  | InputRectPad
+  | InputCircularPad
+  | InputTracePad
+  | InputPolygonPad
 
 export interface InputProblem {
   regionsForPour: InputPourRegion[]

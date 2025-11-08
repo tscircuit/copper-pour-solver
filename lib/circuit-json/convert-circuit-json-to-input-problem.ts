@@ -16,6 +16,7 @@ import type {
 import type {
   InputCircularPad,
   InputPad,
+  InputPolygonPad,
   InputProblem,
   InputRectPad,
   InputTracePad,
@@ -29,6 +30,7 @@ export const convertCircuitJsonToInputProblem = (
     pad_margin: number
     trace_margin: number
     board_edge_margin?: number
+    cutout_margin?: number
   },
 ): InputProblem => {
   const source_ports = circuitJson.filter(
@@ -180,6 +182,46 @@ export const convertCircuitJsonToInputProblem = (
         y: hole.y,
         radius: hole.hole_diameter / 2,
       } as InputCircularPad)
+    } else if (elm.type === "pcb_cutout") {
+      const cutout = elm as any
+      console.log(
+        `Processing cutout: ${cutout.pcb_cutout_id} (shape: ${cutout.shape})`,
+      )
+      if (cutout.shape === "rect") {
+        pads.push({
+          shape: "rect",
+          padId: cutout.pcb_cutout_id,
+          layer: options.layer, // through-all
+          connectivityKey: `cutout:${cutout.pcb_cutout_id}`,
+          bounds: {
+            minX: cutout.center.x - cutout.width / 2,
+            minY: cutout.center.y - cutout.height / 2,
+            maxX: cutout.center.x + cutout.width / 2,
+            maxY: cutout.center.y + cutout.height / 2,
+          },
+        } as InputRectPad)
+      } else if (cutout.shape === "circle") {
+        pads.push({
+          shape: "circle",
+          padId: cutout.pcb_cutout_id,
+          layer: options.layer, // through-all
+          connectivityKey: `cutout:${cutout.pcb_cutout_id}`,
+          x: cutout.center.x,
+          y: cutout.center.y,
+          radius: cutout.radius,
+        } as InputCircularPad)
+      } else if (cutout.shape === "polygon") {
+        console.log(
+          `Polygon cutout points for ${cutout.pcb_cutout_id}: ${JSON.stringify(cutout.points)}`,
+        )
+        pads.push({
+          shape: "polygon",
+          padId: cutout.pcb_cutout_id,
+          layer: options.layer, // through-all
+          connectivityKey: `cutout:${cutout.pcb_cutout_id}`,
+          points: cutout.points,
+        } as InputPolygonPad)
+      }
     } else if (elm.type === "pcb_via") {
       const via = elm as PcbVia
       if (!via.layers.includes(options.layer)) continue
@@ -257,6 +299,7 @@ export const convertCircuitJsonToInputProblem = (
       padMargin: options.pad_margin,
       traceMargin: options.trace_margin,
       board_edge_margin: options.board_edge_margin ?? 0,
+      cutout_margin: options.cutout_margin,
     },
   ]
 
