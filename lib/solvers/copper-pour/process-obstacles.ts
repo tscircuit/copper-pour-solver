@@ -130,15 +130,6 @@ export const processObstaclesForPour = (
 
     if (isCircularPad(pad)) {
       const margin = isHoleOrCutout ? (cutoutMargin ?? 0) : padMargin
-      if (isHoleOrCutout) {
-        console.log(
-          `Applying cutout margin to circular pad/hole/cutout: ${pad.padId}, margin: ${margin}`,
-        )
-      } else {
-        console.log(
-          `Applying pad margin to circular pad: ${pad.padId}, margin: ${margin}`,
-        )
-      }
       const circle = new Flatten.Circle(
         new Flatten.Point(pad.x, pad.y),
         pad.radius + margin,
@@ -149,15 +140,6 @@ export const processObstaclesForPour = (
 
     if (isRectPad(pad)) {
       const margin = isHoleOrCutout ? (cutoutMargin ?? 0) : padMargin
-      if (isHoleOrCutout) {
-        console.log(
-          `Applying cutout margin to rect pad/cutout: ${pad.padId}, margin: ${margin}`,
-        )
-      } else {
-        console.log(
-          `Applying pad margin to rect pad: ${pad.padId}, margin: ${margin}`,
-        )
-      }
       const { bounds } = pad
       const b = new Flatten.Box(
         bounds.minX - margin,
@@ -171,19 +153,11 @@ export const processObstaclesForPour = (
 
     if (isPolygonPad(pad)) {
       const margin = isHoleOrCutout ? (cutoutMargin ?? 0) : 0
-      if (isHoleOrCutout) {
-        console.log(
-          `Applying cutout margin to polygon cutout: ${pad.padId}, margin: ${margin}`,
-        )
-      }
 
       const seen = new Set<string>()
       const uniquePoints = pad.points.filter((p) => {
         const key = `${p.x},${p.y}`
         if (seen.has(key)) {
-          console.log(
-            `Duplicate point detected and removed for ${pad.padId}: (${p.x}, ${p.y})`,
-          )
           return false
         }
         seen.add(key)

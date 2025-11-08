@@ -184,9 +184,6 @@ export const convertCircuitJsonToInputProblem = (
       } as InputCircularPad)
     } else if (elm.type === "pcb_cutout") {
       const cutout = elm as any
-      console.log(
-        `Processing cutout: ${cutout.pcb_cutout_id} (shape: ${cutout.shape})`,
-      )
       if (cutout.shape === "rect") {
         pads.push({
           shape: "rect",
@@ -211,9 +208,6 @@ export const convertCircuitJsonToInputProblem = (
           radius: cutout.radius,
         } as InputCircularPad)
       } else if (cutout.shape === "polygon") {
-        console.log(
-          `Polygon cutout points for ${cutout.pcb_cutout_id}: ${JSON.stringify(cutout.points)}`,
-        )
         pads.push({
           shape: "polygon",
           padId: cutout.pcb_cutout_id,
