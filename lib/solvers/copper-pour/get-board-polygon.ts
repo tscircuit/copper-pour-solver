@@ -8,6 +8,10 @@ export const getBoardPolygon = (region: InputPourRegion): Flatten.Polygon => {
     const polygon = new Flatten.Polygon(
       region.outline.map((p) => Flatten.point(p.x, p.y)),
     )
+    // Ensure polygon is CCW for consistent boolean operations
+    if (polygon.orientation() === Flatten.ORIENTATION.CW) {
+      polygon.reverse()
+    }
     return polygon
   }
 
