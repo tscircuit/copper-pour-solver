@@ -220,14 +220,10 @@ export const convertCircuitJsonToInputProblem = (
       const via = elm as PcbVia
       if (!via.layers.includes(options.layer)) continue
 
-      let connectivityKey: string | undefined
-      if (via.pcb_trace_id) {
-        connectivityKey = pcbTraceIdToConnectivityKey[via.pcb_trace_id]
-      }
-
-      if (!connectivityKey) {
-        connectivityKey = `unconnected-via:${via.pcb_via_id}`
-      }
+      const connectivityKey: string =
+        via.subcircuit_connectivity_map_key ??
+        pcbTraceIdToConnectivityKey[via.pcb_trace_id ?? ""] ??
+        `unconnected-via:${via.pcb_via_id}`
 
       pads.push({
         shape: "circle",
@@ -283,10 +279,10 @@ export const convertCircuitJsonToInputProblem = (
       shape: "rect" as const,
       layer: options.layer,
       bounds: {
-        minX: -width / 2,
-        minY: -height / 2,
-        maxX: width / 2,
-        maxY: height / 2,
+        minX: -width! / 2,
+        minY: -height! / 2,
+        maxX: width! / 2,
+        maxY: height! / 2,
       },
       outline: pcb_board.outline,
       connectivityKey: options.pour_connectivity_key,

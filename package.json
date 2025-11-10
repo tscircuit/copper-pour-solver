@@ -15,7 +15,7 @@
     "@tscircuit/solver-utils": "^0.0.3",
     "@types/bun": "latest",
     "bun-match-svg": "^0.0.13",
-    "circuit-json": "^0.0.301",
+    "circuit-json": "^0.0.306",
     "circuit-to-svg": "^0.0.262",
     "react-cosmos": "^7.0.0",
     "react-cosmos-plugin-vite": "^7.0.0",
