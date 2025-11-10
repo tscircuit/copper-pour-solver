@@ -11,5 +11,8 @@ test("repro01-business-via-card", async () => {
     trace_margin: 0.2,
   })
 
-  await expect(svg).toMatchSvgSnapshot(import.meta.path, "repro01-business-via-card")
+  await expect(svg).toMatchSvgSnapshot(
+    import.meta.path,
+    "repro01-business-via-card",
+  )
 })
