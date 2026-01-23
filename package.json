@@ -25,5 +25,8 @@
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "circuit-json-to-connectivity-map": "^0.0.23"
   }
 }
