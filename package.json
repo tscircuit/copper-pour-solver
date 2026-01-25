@@ -1,7 +1,7 @@
 {
   "name": "@tscircuit/copper-pour-solver",
   "main": "dist/index.js",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "scripts": {
     "format": "biome format . --write",
     "format:check": "biome format .",
@@ -13,6 +13,7 @@
     "@flatten-js/core": "^1.6.2",
     "@tscircuit/math-utils": "^0.0.25",
     "@tscircuit/solver-utils": "^0.0.14",
+    "circuit-json-to-connectivity-map": "^0.0.23",
     "@types/bun": "latest",
     "bun-match-svg": "^0.0.13",
     "circuit-json": "^0.0.306",

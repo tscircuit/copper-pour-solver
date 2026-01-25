@@ -8,6 +8,7 @@ import type {
   PcbCopperPourBRep,
   SourceNet,
 } from "circuit-json"
+import { getFullConnectivityMapFromCircuitJson } from "circuit-json-to-connectivity-map"
 import { convertCircuitJsonToPcbSvg } from "circuit-to-svg"
 
 export const runSolverAndRenderToSvg = (
@@ -29,11 +30,21 @@ export const runSolverAndRenderToSvg = (
   if (!source_net) {
     throw new Error(`Net with name "${pour_options.net_name}" not found`)
   }
-  if (!source_net.subcircuit_connectivity_map_key) {
-    throw new Error(`Net "${pour_options.net_name}" has no connectivity key`)
+
+  const connectivityMap = getFullConnectivityMapFromCircuitJson(circuitJson)
+  let pour_connectivity_key = connectivityMap.getNetConnectedToId(
+    source_net.source_net_id,
+  )
+
+  if (!pour_connectivity_key && source_net.subcircuit_connectivity_map_key) {
+    pour_connectivity_key = source_net.subcircuit_connectivity_map_key
   }
 
-  const pour_connectivity_key = source_net.subcircuit_connectivity_map_key
+  if (!pour_connectivity_key) {
+    throw new Error(
+      `Net "${pour_options.net_name}" has no connectivity mapping`,
+    )
+  }
 
   const inputProblem = convertCircuitJsonToInputProblem(circuitJson, {
     ...pour_options,
