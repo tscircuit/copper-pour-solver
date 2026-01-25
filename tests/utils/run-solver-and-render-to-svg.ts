@@ -10,7 +10,7 @@ import type {
 } from "circuit-json"
 import { getFullConnectivityMapFromCircuitJson } from "circuit-json-to-connectivity-map"
 import { convertCircuitJsonToPcbSvg } from "circuit-to-svg"
-import type { Point } from "@flatten-js/core"
+import type { Point } from "@tscircuit/math-utils"
 
 interface PourOptions {
   layer: LayerRef
