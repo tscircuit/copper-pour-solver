@@ -271,7 +271,6 @@ export const processObstaclesForPour = (
           ),
         )
       }
-      continue
     }
   }
 

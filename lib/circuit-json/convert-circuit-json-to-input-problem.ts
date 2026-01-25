@@ -32,6 +32,7 @@ export const convertCircuitJsonToInputProblem = (
     trace_margin: number
     board_edge_margin?: number
     cutout_margin?: number
+    outline?: Point[]
   },
 ): InputProblem => {
   const pcb_board = circuitJson.find((e) => e.type === "pcb_board") as
@@ -207,17 +208,35 @@ export const convertCircuitJsonToInputProblem = (
   }
 
   const { width, height } = pcb_board
+
+  // Use pour-specific outline if provided, otherwise fall back to board outline
+  const outline = options.outline ?? pcb_board.outline
+
+  let bounds: { minX: number; minY: number; maxX: number; maxY: number }
+  if (outline && outline.length > 0) {
+    const xs = outline.map((p) => p.x)
+    const ys = outline.map((p) => p.y)
+    bounds = {
+      minX: Math.min(...xs),
+      minY: Math.min(...ys),
+      maxX: Math.max(...xs),
+      maxY: Math.max(...ys),
+    }
+  } else {
+    bounds = {
+      minX: -width! / 2,
+      minY: -height! / 2,
+      maxX: width! / 2,
+      maxY: height! / 2,
+    }
+  }
+
   const regionsForPour = [
     {
       shape: "rect" as const,
       layer: options.layer,
-      bounds: {
-        minX: -width! / 2,
-        minY: -height! / 2,
-        maxX: width! / 2,
-        maxY: height! / 2,
-      },
-      outline: pcb_board.outline,
+      bounds,
+      outline,
       connectivityKey: options.pour_connectivity_key,
       padMargin: options.pad_margin,
       traceMargin: options.trace_margin,
