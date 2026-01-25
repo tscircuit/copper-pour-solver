@@ -12,6 +12,10 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
     super(input)
   }
 
+  override getSolverName(): string {
+    return "CopperPourPipelineSolver"
+  }
+
   override getOutput(): PipelineOutput {
     const brep_shapes: BRepShape[] = []
 
