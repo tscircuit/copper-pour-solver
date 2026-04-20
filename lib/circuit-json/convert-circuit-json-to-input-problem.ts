@@ -84,7 +84,6 @@ export const convertCircuitJsonToInputProblem = (
       }
     } else if (elm.type === "pcb_plated_hole") {
       const platedHole = elm as PcbPlatedHole
-      if (platedHole.shape !== "circle") continue
       if (!platedHole.layers.includes(options.layer)) continue
 
       let connectivityKey = connectivityMap.getNetConnectedToId(
@@ -94,15 +93,35 @@ export const convertCircuitJsonToInputProblem = (
         connectivityKey = `unconnected-plated-hole:${platedHole.pcb_plated_hole_id}`
       }
 
-      pads.push({
-        shape: "circle",
-        padId: platedHole.pcb_plated_hole_id,
-        layer: options.layer,
-        connectivityKey,
-        x: platedHole.x,
-        y: platedHole.y,
-        radius: platedHole.outer_diameter / 2,
-      } as InputCircularPad)
+      if (platedHole.shape === "circle") {
+        pads.push({
+          shape: "circle",
+          padId: platedHole.pcb_plated_hole_id,
+          layer: options.layer,
+          connectivityKey,
+          x: platedHole.x,
+          y: platedHole.y,
+          radius: platedHole.outer_diameter / 2,
+        } as InputCircularPad)
+      } else if (platedHole.shape === "circular_hole_with_rect_pad") {
+        const rectWidth = platedHole.rect_pad_width
+        const rectHeight = platedHole.rect_pad_height
+        if (typeof rectWidth !== "number" || typeof rectHeight !== "number") {
+          continue
+        }
+        pads.push({
+          shape: "rect",
+          padId: platedHole.pcb_plated_hole_id,
+          layer: options.layer,
+          connectivityKey,
+          bounds: {
+            minX: platedHole.x - rectWidth / 2,
+            minY: platedHole.y - rectHeight / 2,
+            maxX: platedHole.x + rectWidth / 2,
+            maxY: platedHole.y + rectHeight / 2,
+          },
+        } as InputRectPad)
+      }
     } else if (elm.type === "pcb_hole") {
       const hole = elm as PcbHole
       if (hole.hole_shape !== "circle") continue
