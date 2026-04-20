@@ -104,8 +104,8 @@ export const convertCircuitJsonToInputProblem = (
           radius: platedHole.outer_diameter / 2,
         } as InputCircularPad)
       } else if (platedHole.shape === "circular_hole_with_rect_pad") {
-        const rectWidth = (platedHole as any).rect_pad_width
-        const rectHeight = (platedHole as any).rect_pad_height
+        const rectWidth = platedHole.rect_pad_width
+        const rectHeight = platedHole.rect_pad_height
         if (typeof rectWidth !== "number" || typeof rectHeight !== "number") {
           continue
         }
