@@ -11,7 +11,7 @@ test("stm32f746g-disco top layer full board repro", () => {
     trace_margin: 0.2,
   })
 
- expect(svg).toMatchSvgSnapshot(import.meta.path+"top")
+  expect(svg).toMatchSvgSnapshot(import.meta.path + "top")
 })
 
 test("stm32f746g-disco bottom layer full board repro", () => {
@@ -22,5 +22,5 @@ test("stm32f746g-disco bottom layer full board repro", () => {
     trace_margin: 0.2,
   })
 
- expect(svg).toMatchSvgSnapshot(import.meta.path+"bottom")
+  expect(svg).toMatchSvgSnapshot(import.meta.path + "bottom")
 })
