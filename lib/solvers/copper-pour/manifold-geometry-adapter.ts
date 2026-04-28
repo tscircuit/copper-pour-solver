@@ -1,176 +1,34 @@
-import type { Point } from "@tscircuit/math-utils"
-import type {
-  CrossSection as CrossSectionType,
-  FillRule,
-  SimplePolygon,
-} from "manifold-3d"
+import type { FillRule } from "manifold-3d"
+import {
+  getCrossSection,
+  runManifoldOperation,
+  type CrossSection,
+} from "./manifold-runtime"
+import {
+  fromScaledManifoldPolygons,
+  MANIFOLD_GEOMETRY_SCALE,
+  normalizeRing,
+  signedArea,
+  toScaledManifoldPolygons,
+  type PolygonRing,
+} from "./polygon-ring"
 
-const manifoldModule = await import("manifold-3d")
-const manifoldFactory = manifoldModule.default as unknown as () => Promise<{
-  CrossSection: typeof CrossSectionType
-  setup: () => void
-}>
-const manifold = await manifoldFactory()
-manifold.setup()
-
-const { CrossSection } = manifold
-
-export const MANIFOLD_GEOMETRY_SCALE = 1_000_000
 export const DEFAULT_MIN_ISLAND_AREA = 1e-8
 
-export type PolygonRing = Point[]
-type ScaledPolygons = SimplePolygon[]
 export type CopperPourIsland = {
   outerRing: PolygonRing
   innerRings: PolygonRing[]
 }
 
-const describePolygons = (polygons: ScaledPolygons) => {
-  let pointCount = 0
-  const bbox = {
-    minX: Number.POSITIVE_INFINITY,
-    minY: Number.POSITIVE_INFINITY,
-    maxX: Number.NEGATIVE_INFINITY,
-    maxY: Number.NEGATIVE_INFINITY,
-  }
-
-  for (const polygon of polygons) {
-    pointCount += polygon.length
-    for (const [x, y] of polygon) {
-      bbox.minX = Math.min(bbox.minX, x)
-      bbox.minY = Math.min(bbox.minY, y)
-      bbox.maxX = Math.max(bbox.maxX, x)
-      bbox.maxY = Math.max(bbox.maxY, y)
-    }
-  }
-
-  return {
-    polygonCount: polygons.length,
-    pointCount,
-    bbox: pointCount > 0 ? bbox : null,
-    scale: MANIFOLD_GEOMETRY_SCALE,
-  }
-}
-
-const assertFinitePoint = (point: Point, operation: string) => {
-  if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) {
-    throw new Error(
-      `${operation} received non-finite point (${point.x}, ${point.y})`,
-    )
-  }
-}
-
-const pointsEqual = (a: Point, b: Point) => a.x === b.x && a.y === b.y
-
-const signedArea = (ring: PolygonRing) => {
-  let area = 0
-  for (let i = 0; i < ring.length; i++) {
-    const current = ring[i]!
-    const next = ring[(i + 1) % ring.length]!
-    area += current.x * next.y - next.x * current.y
-  }
-  return area / 2
-}
-
-export const normalizeRing = (
-  ring: PolygonRing,
-  operation = "normalizeRing",
-): PolygonRing => {
-  const normalized: PolygonRing = []
-
-  for (const point of ring) {
-    assertFinitePoint(point, operation)
-    const roundedPoint = {
-      x:
-        Math.round(point.x * MANIFOLD_GEOMETRY_SCALE) / MANIFOLD_GEOMETRY_SCALE,
-      y:
-        Math.round(point.y * MANIFOLD_GEOMETRY_SCALE) / MANIFOLD_GEOMETRY_SCALE,
-    }
-    const previous = normalized[normalized.length - 1]
-    if (!previous || !pointsEqual(previous, roundedPoint)) {
-      normalized.push(roundedPoint)
-    }
-  }
-
-  if (
-    normalized.length > 1 &&
-    pointsEqual(normalized[0]!, normalized[normalized.length - 1]!)
-  ) {
-    normalized.pop()
-  }
-
-  const uniquePoints = new Set(normalized.map((p) => `${p.x},${p.y}`))
-  if (uniquePoints.size < 3 || Math.abs(signedArea(normalized)) < 1e-18) {
-    return []
-  }
-
-  return normalized
-}
-
-// Manifold owns all robust 2D clipping/offsetting for copper-pour geometry.
-// This adapter keeps scaling, ring normalization, errors, and output grouping
-// out of the solver so the rest of the repo stays independent of WASM details.
-export const toScaledManifoldPolygons = (
-  polygons: PolygonRing[],
-  operation = "toScaledManifoldPolygons",
-): ScaledPolygons => {
-  const scaledPolygons: ScaledPolygons = []
-
-  for (const polygon of polygons) {
-    const normalized = normalizeRing(polygon, operation)
-    if (normalized.length < 3) continue
-    const positiveRing =
-      signedArea(normalized) < 0 ? [...normalized].reverse() : normalized
-    scaledPolygons.push(
-      positiveRing.map((p) => [
-        Math.round(p.x * MANIFOLD_GEOMETRY_SCALE),
-        Math.round(p.y * MANIFOLD_GEOMETRY_SCALE),
-      ]),
-    )
-  }
-
-  return scaledPolygons
-}
-
-export const fromScaledManifoldPolygons = (
-  polygons: SimplePolygon[],
-): PolygonRing[] =>
-  polygons
-    .map((polygon) =>
-      normalizeRing(
-        polygon.map(([x, y]) => ({
-          x: x / MANIFOLD_GEOMETRY_SCALE,
-          y: y / MANIFOLD_GEOMETRY_SCALE,
-        })),
-        "fromScaledManifoldPolygons",
-      ),
-    )
-    .filter((polygon) => polygon.length >= 3)
-
-const runManifoldOperation = <T>(
-  operation: string,
-  polygons: ScaledPolygons,
-  callback: () => T,
-): T => {
-  try {
-    return callback()
-  } catch (error) {
-    const details = describePolygons(polygons)
-    const message = error instanceof Error ? error.message : String(error)
-    throw new Error(
-      `${operation} failed: ${message}; details=${JSON.stringify(details)}`,
-    )
-  }
-}
-
 export const crossSectionFromPolygon = (
   polygon: PolygonRing,
   fillRule: FillRule = "Positive",
-): CrossSectionType => {
+): CrossSection => {
   const scaledPolygons = toScaledManifoldPolygons(
     [polygon],
     "crossSectionFromPolygon",
   )
+  const CrossSection = getCrossSection()
   if (scaledPolygons.length === 0) {
     return CrossSection.ofPolygons([])
   }
@@ -182,11 +40,12 @@ export const crossSectionFromPolygon = (
 export const crossSectionFromPolygons = (
   polygons: PolygonRing[],
   fillRule: FillRule = "Positive",
-): CrossSectionType => {
+): CrossSection => {
   const scaledPolygons = toScaledManifoldPolygons(
     polygons,
     "crossSectionFromPolygons",
   )
+  const CrossSection = getCrossSection()
   if (scaledPolygons.length === 0) {
     return CrossSection.ofPolygons([])
   }
@@ -196,9 +55,10 @@ export const crossSectionFromPolygons = (
 }
 
 export const composeCrossSections = (
-  sections: CrossSectionType[],
-): CrossSectionType => {
+  sections: CrossSection[],
+): CrossSection => {
   const nonEmptySections = sections.filter((section) => !section.isEmpty())
+  const CrossSection = getCrossSection()
   if (nonEmptySections.length === 0) {
     return CrossSection.ofPolygons([])
   }
@@ -218,6 +78,7 @@ export const offsetPolygon = (
   }
 
   const scaledMargin = margin * MANIFOLD_GEOMETRY_SCALE
+  const CrossSection = getCrossSection()
   const section = runManifoldOperation(
     "offsetPolygon.input",
     scaledPolygons,
@@ -234,7 +95,7 @@ export const offsetPolygon = (
 export const subtractBlockersFromPour = (
   pourPolygon: PolygonRing,
   blockerPolygons: PolygonRing[],
-): CrossSectionType => {
+): CrossSection => {
   const pourSection = crossSectionFromPolygon(pourPolygon)
   const blockerSection = crossSectionFromPolygons(blockerPolygons)
 
@@ -258,9 +119,9 @@ export const subtractBlockersFromPour = (
 }
 
 export const removeTinyIslands = (
-  section: CrossSectionType,
+  section: CrossSection,
   minArea = DEFAULT_MIN_ISLAND_AREA,
-): CrossSectionType => {
+): CrossSection => {
   if (section.isEmpty()) return section
 
   const minScaledArea =
@@ -273,7 +134,7 @@ export const removeTinyIslands = (
 }
 
 export const crossSectionToCopperPourIslands = (
-  section: CrossSectionType,
+  section: CrossSection,
 ): CopperPourIsland[] => {
   const islands: CopperPourIsland[] = []
 
@@ -296,11 +157,3 @@ export const crossSectionToCopperPourIslands = (
 
   return islands
 }
-
-export const geometryDebugSummary = (
-  label: string,
-  polygons: PolygonRing[],
-) => ({
-  label,
-  ...describePolygons(toScaledManifoldPolygons(polygons, label)),
-})

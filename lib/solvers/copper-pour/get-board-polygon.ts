@@ -1,6 +1,5 @@
 import type { InputPourRegion } from "lib/types"
-import type { PolygonRing } from "./manifold-geometry-adapter"
-import { normalizeRing } from "./manifold-geometry-adapter"
+import { normalizeRing, type PolygonRing } from "./polygon-ring"
 
 export const getBoardPolygon = (region: InputPourRegion): PolygonRing => {
   const board_edge_margin = region.board_edge_margin ?? 0

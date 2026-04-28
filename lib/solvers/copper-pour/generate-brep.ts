@@ -1,15 +1,6 @@
 import type { BRepShape } from "circuit-json"
-import type { CopperPourIsland, PolygonRing } from "./manifold-geometry-adapter"
-
-const signedArea = (ring: PolygonRing) => {
-  let area = 0
-  for (let i = 0; i < ring.length; i++) {
-    const current = ring[i]!
-    const next = ring[(i + 1) % ring.length]!
-    area += current.x * next.y - next.x * current.y
-  }
-  return area / 2
-}
+import type { CopperPourIsland } from "./manifold-geometry-adapter"
+import { signedArea, type PolygonRing } from "./polygon-ring"
 
 const ensureAreaSign = (
   ring: PolygonRing,

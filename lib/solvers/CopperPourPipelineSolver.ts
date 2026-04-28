@@ -5,7 +5,6 @@ import { generateBRep } from "./copper-pour/generate-brep"
 import { getBoardPolygon } from "./copper-pour/get-board-polygon"
 import {
   crossSectionToCopperPourIslands,
-  geometryDebugSummary,
   removeTinyIslands,
   subtractBlockersFromPour,
 } from "./copper-pour/manifold-geometry-adapter"
@@ -43,33 +42,10 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
         region.outline,
       )
 
-      if (process.env.COPPER_POUR_DEBUG_GEOMETRY) {
-        console.info(
-          JSON.stringify([
-            geometryDebugSummary("input pour polygon", [boardPolygon]),
-            geometryDebugSummary("unioned blockers input", polygonsToSubtract),
-          ]),
-        )
-      }
-
       const finalPour = removeTinyIslands(
         subtractBlockersFromPour(boardPolygon, polygonsToSubtract),
       )
       const pourIslands = crossSectionToCopperPourIslands(finalPour)
-
-      if (process.env.COPPER_POUR_DEBUG_GEOMETRY) {
-        console.info(
-          JSON.stringify(
-            geometryDebugSummary(
-              "final copper polygons",
-              pourIslands.flatMap((island) => [
-                island.outerRing,
-                ...island.innerRings,
-              ]),
-            ),
-          ),
-        )
-      }
 
       const new_breps = generateBRep(pourIslands)
       brep_shapes.push(...new_breps)
