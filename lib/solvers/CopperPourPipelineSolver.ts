@@ -1,15 +1,10 @@
 import { BasePipelineSolver } from "@tscircuit/solver-utils"
+import { getBoardPolygon } from "./copper-pour/get-board-polygon"
+import Flatten from "@flatten-js/core"
+import { processObstaclesForPour } from "./copper-pour/process-obstacles"
+import { generateBRep } from "./copper-pour/generate-brep"
 import type { BRepShape } from "circuit-json"
 import type { InputProblem, PipelineOutput } from "lib/types"
-import { generateBRep } from "./copper-pour/generate-brep"
-import { getBoardPolygon } from "./copper-pour/get-board-polygon"
-import {
-  crossSectionToCopperPourIslands,
-  geometryDebugSummary,
-  removeTinyIslands,
-  subtractBlockersFromPour,
-} from "./copper-pour/manifold-geometry-adapter"
-import { processObstaclesForPour } from "./copper-pour/process-obstacles"
 
 export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
   pipelineDef = []
@@ -43,35 +38,27 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
         region.outline,
       )
 
-      if (process.env.COPPER_POUR_DEBUG_GEOMETRY) {
-        console.info(
-          JSON.stringify([
-            geometryDebugSummary("input pour polygon", [boardPolygon]),
-            geometryDebugSummary("unioned blockers input", polygonsToSubtract),
-          ]),
-        )
+      let pourPolygons: Flatten.Polygon | Flatten.Polygon[] = boardPolygon
+
+      for (const poly of polygonsToSubtract) {
+        const currentPolys = Array.isArray(pourPolygons)
+          ? pourPolygons
+          : [pourPolygons]
+        const nextPolys: Flatten.Polygon[] = []
+        for (const p of currentPolys) {
+          const result = Flatten.BooleanOperations.subtract(p, poly)
+          if (result) {
+            if (Array.isArray(result)) {
+              nextPolys.push(...result.filter((r) => !r.isEmpty()))
+            } else {
+              if (!result.isEmpty()) nextPolys.push(result)
+            }
+          }
+        }
+        pourPolygons = nextPolys
       }
 
-      const finalPour = removeTinyIslands(
-        subtractBlockersFromPour(boardPolygon, polygonsToSubtract),
-      )
-      const pourIslands = crossSectionToCopperPourIslands(finalPour)
-
-      if (process.env.COPPER_POUR_DEBUG_GEOMETRY) {
-        console.info(
-          JSON.stringify(
-            geometryDebugSummary(
-              "final copper polygons",
-              pourIslands.flatMap((island) => [
-                island.outerRing,
-                ...island.innerRings,
-              ]),
-            ),
-          ),
-        )
-      }
-
-      const new_breps = generateBRep(pourIslands)
+      const new_breps = generateBRep(pourPolygons)
       brep_shapes.push(...new_breps)
     }
 

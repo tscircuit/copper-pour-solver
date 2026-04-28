@@ -1,12 +1,18 @@
 import type { InputPourRegion } from "lib/types"
-import type { PolygonRing } from "./manifold-geometry-adapter"
-import { normalizeRing } from "./manifold-geometry-adapter"
+import Flatten from "@flatten-js/core"
 
-export const getBoardPolygon = (region: InputPourRegion): PolygonRing => {
+export const getBoardPolygon = (region: InputPourRegion): Flatten.Polygon => {
   const board_edge_margin = region.board_edge_margin ?? 0
 
   if (region.outline && region.outline.length > 0) {
-    return normalizeRing(region.outline, "getBoardPolygon.outline")
+    const polygon = new Flatten.Polygon(
+      region.outline.map((p) => Flatten.point(p.x, p.y)),
+    )
+    // Ensure polygon is CCW for consistent boolean operations
+    if (polygon.orientation() === Flatten.ORIENTATION.CW) {
+      polygon.reverse()
+    }
+    return polygon
   }
 
   const { bounds } = region
@@ -18,13 +24,15 @@ export const getBoardPolygon = (region: InputPourRegion): PolygonRing => {
   }
 
   if (newBounds.minX >= newBounds.maxX || newBounds.minY >= newBounds.maxY) {
-    return []
+    return new Flatten.Polygon()
   }
 
-  return [
-    { x: newBounds.minX, y: newBounds.minY },
-    { x: newBounds.maxX, y: newBounds.minY },
-    { x: newBounds.maxX, y: newBounds.maxY },
-    { x: newBounds.minX, y: newBounds.maxY },
-  ]
+  return new Flatten.Polygon(
+    new Flatten.Box(
+      newBounds.minX,
+      newBounds.minY,
+      newBounds.maxX,
+      newBounds.maxY,
+    ).toPoints(),
+  )
 }

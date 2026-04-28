@@ -1,3 +1,4 @@
+import Flatten from "@flatten-js/core"
 import type { Point } from "@tscircuit/math-utils"
 import type {
   InputCircularPad,
@@ -6,14 +7,10 @@ import type {
   InputRectPad,
   InputTracePad,
 } from "lib/types"
-import {
-  normalizeRing,
-  offsetPolygon,
-  type PolygonRing,
-} from "./manifold-geometry-adapter"
+import { circleToPolygon } from "./circle-to-polygon"
 
 interface ProcessedObstacles {
-  polygonsToSubtract: PolygonRing[]
+  polygonsToSubtract: Flatten.Polygon[]
 }
 
 const isRectPad = (pad: InputPad): pad is InputRectPad => pad.shape === "rect"
@@ -23,34 +20,6 @@ const isCircularPad = (pad: InputPad): pad is InputCircularPad =>
   pad.shape === "circle"
 const isPolygonPad = (pad: InputPad): pad is InputPolygonPad =>
   pad.shape === "polygon"
-
-const circleToPolygon = (
-  center: Point,
-  radius: number,
-  numSegments = 32,
-): PolygonRing => {
-  const points: PolygonRing = []
-  for (let i = 0; i < numSegments; i++) {
-    const angle = (i / numSegments) * 2 * Math.PI
-    points.push({
-      x: center.x + radius * Math.cos(angle),
-      y: center.y + radius * Math.sin(angle),
-    })
-  }
-  return points
-}
-
-const boxToPolygon = (
-  minX: number,
-  minY: number,
-  maxX: number,
-  maxY: number,
-): PolygonRing => [
-  { x: minX, y: minY },
-  { x: maxX, y: minY },
-  { x: maxX, y: maxY },
-  { x: minX, y: maxY },
-]
 
 export const processObstaclesForPour = (
   pads: InputPad[],
@@ -63,7 +32,7 @@ export const processObstaclesForPour = (
   },
   boardOutline?: Point[],
 ): ProcessedObstacles => {
-  const polygonsToSubtract: PolygonRing[] = []
+  const polygonsToSubtract: Flatten.Polygon[] = []
 
   const { padMargin, traceMargin, board_edge_margin, cutoutMargin } = margins
 
@@ -73,10 +42,13 @@ export const processObstaclesForPour = (
     board_edge_margin &&
     board_edge_margin > 0
   ) {
-    const vertices = normalizeRing(
-      boardOutline,
-      "processObstacles.boardOutline",
+    const boardPoly = new Flatten.Polygon(
+      boardOutline.map((p) => Flatten.point(p.x, p.y)),
     )
+    if (boardPoly.area() < 0) {
+      boardPoly.reverse()
+    }
+    const vertices = boardPoly.vertices
 
     // Add clearance shapes at vertices
     for (let i = 0; i < vertices.length; i++) {
@@ -86,21 +58,21 @@ export const processObstaclesForPour = (
 
       if (!p1 || !p2 || !p3) continue
 
-      const v1 = { x: p2.x - p1.x, y: p2.y - p1.y }
-      const v2 = { x: p3.x - p2.x, y: p3.y - p2.y }
-      const crossProduct = v1.x * v2.y - v1.y * v2.x
+      const v1 = new Flatten.Vector(p1, p2)
+      const v2 = new Flatten.Vector(p2, p3)
+      const crossProduct = v1.cross(v2)
 
-      polygonsToSubtract.push(circleToPolygon(p2, board_edge_margin))
+      const circle = new Flatten.Circle(p2, board_edge_margin)
+      polygonsToSubtract.push(circleToPolygon(circle))
 
       if (crossProduct < 0) {
-        polygonsToSubtract.push(
-          boxToPolygon(
-            p2.x - board_edge_margin,
-            p2.y - board_edge_margin,
-            p2.x + board_edge_margin,
-            p2.y + board_edge_margin,
-          ),
+        const box = new Flatten.Box(
+          p2.x - board_edge_margin,
+          p2.y - board_edge_margin,
+          p2.x + board_edge_margin,
+          p2.y + board_edge_margin,
         )
+        polygonsToSubtract.push(new Flatten.Polygon(box.toPoints()))
       }
     }
 
@@ -139,7 +111,9 @@ export const processObstaclesForPour = (
         y: centerY + p.x * sinAngle + p.y * cosAngle,
       }))
 
-      polygonsToSubtract.push(rotatedCorners)
+      polygonsToSubtract.push(
+        new Flatten.Polygon(rotatedCorners.map((p) => Flatten.point(p.x, p.y))),
+      )
     }
   }
 
@@ -156,23 +130,24 @@ export const processObstaclesForPour = (
 
     if (isCircularPad(pad)) {
       const margin = isHoleOrCutout ? (cutoutMargin ?? 0) : padMargin
-      polygonsToSubtract.push(
-        circleToPolygon({ x: pad.x, y: pad.y }, pad.radius + margin),
+      const circle = new Flatten.Circle(
+        new Flatten.Point(pad.x, pad.y),
+        pad.radius + margin,
       )
+      polygonsToSubtract.push(circleToPolygon(circle))
       continue
     }
 
     if (isRectPad(pad)) {
       const margin = isHoleOrCutout ? (cutoutMargin ?? 0) : padMargin
       const { bounds } = pad
-      polygonsToSubtract.push(
-        boxToPolygon(
-          bounds.minX - margin,
-          bounds.minY - margin,
-          bounds.maxX + margin,
-          bounds.maxY + margin,
-        ),
+      const b = new Flatten.Box(
+        bounds.minX - margin,
+        bounds.minY - margin,
+        bounds.maxX + margin,
+        bounds.maxY + margin,
       )
+      polygonsToSubtract.push(new Flatten.Polygon(b.toPoints()))
       continue
     }
 
@@ -191,24 +166,67 @@ export const processObstaclesForPour = (
 
       if (uniquePoints.length < 3) continue
 
-      const polygon = normalizeRing(uniquePoints, "processObstacles.polygonPad")
-      if (polygon.length < 3) continue
+      const polygon = new Flatten.Polygon(
+        uniquePoints.map((p) => Flatten.point(p.x, p.y)),
+      )
+
+      if (Math.abs(polygon.area()) < 1e-9) continue
 
       if (margin <= 0) {
         polygonsToSubtract.push(polygon)
         continue
       }
 
-      polygonsToSubtract.push(...offsetPolygon(polygon, margin))
+      // Ensure polygon is CCW for consistent normal direction.
+      // In flatten-js, CCW corresponds to a negative area.
+      if (polygon.area() > 0) {
+        polygon.reverse()
+      }
+
+      const offsetLines: Flatten.Line[] = []
+      const polygonVertices = polygon.vertices
+      for (let i = 0; i < polygonVertices.length; i++) {
+        const p1 = polygonVertices[i]!
+        const p2 = polygonVertices[(i + 1) % polygonVertices.length]!
+
+        const segment = Flatten.segment(p1, p2)
+
+        if (segment.length === 0) continue
+
+        const line = Flatten.line(segment.start, segment.end)
+
+        // For a CCW polygon, the normal (rotated +90deg, i.e. "left") points inward.
+        // We must translate outward, so we use a negative margin.
+        const norm = line.norm
+        const offsetLine = line.translate(norm.multiply(-margin))
+        offsetLines.push(offsetLine)
+      }
+
+      const newPolygonPoints: Flatten.Point[] = []
+      for (let i = 0; i < offsetLines.length; i++) {
+        const line1 = offsetLines[i]!
+        const line2 = offsetLines[(i + 1) % offsetLines.length]!
+
+        const ip = line1.intersect(line2)
+        if (ip.length > 0) {
+          newPolygonPoints.push(ip[0]!)
+        }
+      }
+
+      if (newPolygonPoints.length >= 3) {
+        polygonsToSubtract.push(new Flatten.Polygon(newPolygonPoints))
+      }
       continue
     }
 
     if (isTracePad(pad)) {
       // Add circles for each vertex
       for (const segment of pad.segments) {
-        polygonsToSubtract.push(
-          circleToPolygon(segment, pad.width / 2 + traceMargin),
+        const circle = new Flatten.Circle(
+          new Flatten.Point(segment.x, segment.y),
+          pad.width / 2 + traceMargin,
         )
+        polygonsToSubtract.push(circleToPolygon(circle))
       }
 
       // Add rectangles for each segment
@@ -247,7 +265,11 @@ export const processObstaclesForPour = (
           y: centerY + p.x * sinAngle + p.y * cosAngle,
         }))
 
-        polygonsToSubtract.push(rotatedCorners)
+        polygonsToSubtract.push(
+          new Flatten.Polygon(
+            rotatedCorners.map((p) => Flatten.point(p.x, p.y)),
+          ),
+        )
       }
     }
   }

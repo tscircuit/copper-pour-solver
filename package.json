@@ -26,8 +26,5 @@
   },
   "peerDependencies": {
     "typescript": "^5"
-  },
-  "dependencies": {
-    "manifold-3d": "^3.4.1"
   }
 }
