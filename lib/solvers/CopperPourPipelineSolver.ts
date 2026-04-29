@@ -1,10 +1,15 @@
 import { BasePipelineSolver } from "@tscircuit/solver-utils"
-import { getBoardPolygon } from "./copper-pour/get-board-polygon"
-import Flatten from "@flatten-js/core"
-import { processObstaclesForPour } from "./copper-pour/process-obstacles"
-import { generateBRep } from "./copper-pour/generate-brep"
 import type { BRepShape } from "circuit-json"
 import type { InputProblem, PipelineOutput } from "lib/types"
+import { generateBRep } from "./copper-pour/generate-brep"
+import { getBoardPolygon } from "./copper-pour/get-board-polygon"
+import {
+  crossSectionToCopperPourIslands,
+  removeTinyIslands,
+  subtractBlockersFromPour,
+} from "./copper-pour/manifold-geometry-adapter"
+import { isManifoldGeometryInitialized } from "./copper-pour/manifold-runtime"
+import { processObstaclesForPour } from "./copper-pour/process-obstacles"
 
 export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
   pipelineDef = []
@@ -17,6 +22,12 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
   }
 
   override getOutput(): PipelineOutput {
+    if (!isManifoldGeometryInitialized()) {
+      throw new Error(
+        "Manifold geometry has not been initialized. Call initializeManifoldGeometry() before solving copper pours.",
+      )
+    }
+
     const brep_shapes: BRepShape[] = []
 
     for (const region of this.input.regionsForPour) {
@@ -38,27 +49,12 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
         region.outline,
       )
 
-      let pourPolygons: Flatten.Polygon | Flatten.Polygon[] = boardPolygon
+      const finalPour = removeTinyIslands(
+        subtractBlockersFromPour(boardPolygon, polygonsToSubtract),
+      )
+      const pourIslands = crossSectionToCopperPourIslands(finalPour)
 
-      for (const poly of polygonsToSubtract) {
-        const currentPolys = Array.isArray(pourPolygons)
-          ? pourPolygons
-          : [pourPolygons]
-        const nextPolys: Flatten.Polygon[] = []
-        for (const p of currentPolys) {
-          const result = Flatten.BooleanOperations.subtract(p, poly)
-          if (result) {
-            if (Array.isArray(result)) {
-              nextPolys.push(...result.filter((r) => !r.isEmpty()))
-            } else {
-              if (!result.isEmpty()) nextPolys.push(result)
-            }
-          }
-        }
-        pourPolygons = nextPolys
-      }
-
-      const new_breps = generateBRep(pourPolygons)
+      const new_breps = generateBRep(pourIslands)
       brep_shapes.push(...new_breps)
     }
 
