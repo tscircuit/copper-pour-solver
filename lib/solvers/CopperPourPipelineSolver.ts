@@ -8,6 +8,7 @@ import {
   removeTinyIslands,
   subtractBlockersFromPour,
 } from "./copper-pour/manifold-geometry-adapter"
+import { isManifoldGeometryInitialized } from "./copper-pour/manifold-runtime"
 import { processObstaclesForPour } from "./copper-pour/process-obstacles"
 
 export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
@@ -21,6 +22,12 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
   }
 
   override getOutput(): PipelineOutput {
+    if (!isManifoldGeometryInitialized()) {
+      throw new Error(
+        "Manifold geometry has not been initialized. Call initializeManifoldGeometry() before solving copper pours.",
+      )
+    }
+
     const brep_shapes: BRepShape[] = []
 
     for (const region of this.input.regionsForPour) {

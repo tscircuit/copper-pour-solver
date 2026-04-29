@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import type { BRepShape } from "circuit-json"
-import { CopperPourPipelineSolver, initializeManifoldGeometry } from "lib/index"
+import { CopperPourPipelineSolver } from "lib/index"
 import {
   composeCrossSections,
   crossSectionFromPolygon,
@@ -8,8 +8,6 @@ import {
   removeTinyIslands,
 } from "lib/solvers/copper-pour/manifold-geometry-adapter"
 import type { InputPad, InputProblem } from "lib/types"
-
-await initializeManifoldGeometry()
 
 const baseProblem = (pads: InputPad[]): InputProblem => ({
   regionsForPour: [

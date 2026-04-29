@@ -19,6 +19,9 @@ export const initializeManifoldGeometry = async () => {
   await manifoldModulePromise
 }
 
+export const isManifoldGeometryInitialized = () =>
+  Boolean(getManifoldModuleSync())
+
 export const getCrossSection = () => {
   const manifold = getManifoldModuleSync()
   if (!manifold) {

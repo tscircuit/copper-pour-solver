@@ -1,7 +1,6 @@
 import {
   CopperPourPipelineSolver,
   convertCircuitJsonToInputProblem,
-  initializeManifoldGeometry,
 } from "lib/index"
 import type {
   AnyCircuitElement,
@@ -12,8 +11,6 @@ import type {
 import { getFullConnectivityMapFromCircuitJson } from "circuit-json-to-connectivity-map"
 import { convertCircuitJsonToPcbSvg } from "circuit-to-svg"
 import type { Point } from "@tscircuit/math-utils"
-
-await initializeManifoldGeometry()
 
 interface PourOptions {
   layer: LayerRef
