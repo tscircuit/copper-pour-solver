@@ -20,6 +20,8 @@ export type CopperPourIsland = {
   innerRings: PolygonRing[]
 }
 
+const emptyCrossSection = (): CrossSection => getCrossSection().square([0, 0])
+
 export const crossSectionFromPolygon = (
   polygon: PolygonRing,
   fillRule: FillRule = "Positive",
@@ -30,7 +32,7 @@ export const crossSectionFromPolygon = (
   )
   const CrossSection = getCrossSection()
   if (scaledPolygons.length === 0) {
-    return CrossSection.ofPolygons([])
+    return emptyCrossSection()
   }
   return runManifoldOperation("crossSectionFromPolygon", scaledPolygons, () =>
     CrossSection.ofPolygons(scaledPolygons, fillRule),
@@ -47,7 +49,7 @@ export const crossSectionFromPolygons = (
   )
   const CrossSection = getCrossSection()
   if (scaledPolygons.length === 0) {
-    return CrossSection.ofPolygons([])
+    return emptyCrossSection()
   }
   return runManifoldOperation("crossSectionFromPolygons", scaledPolygons, () =>
     CrossSection.ofPolygons(scaledPolygons, fillRule),
@@ -60,7 +62,7 @@ export const composeCrossSections = (
   const nonEmptySections = sections.filter((section) => !section.isEmpty())
   const CrossSection = getCrossSection()
   if (nonEmptySections.length === 0) {
-    return CrossSection.ofPolygons([])
+    return emptyCrossSection()
   }
   return runManifoldOperation("composeCrossSections", [], () =>
     CrossSection.compose(nonEmptySections),

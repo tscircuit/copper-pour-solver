@@ -60,6 +60,15 @@ const assertValidRings = (shapes: BRepShape[]) => {
   }
 }
 
+test("empty blocker list still returns full pour", () => {
+  const shapes = solve([])
+
+  expect(shapes).toHaveLength(1)
+  expect(shapes[0]!.inner_rings).toHaveLength(0)
+  expect(totalArea(shapes)).toBe(100)
+  assertValidRings(shapes)
+})
+
 test("trace clearance subtracts from rectangular pour", () => {
   const shapes = solve([
     {
