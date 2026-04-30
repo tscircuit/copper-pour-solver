@@ -20,7 +20,7 @@ export const initializeManifoldGeometry = async () => {
   } catch (e) {
     const isBrowser = typeof window !== "undefined"
     if (isBrowser) {
-    setWasmUrl("https://unpkg.com/manifold-3d@3.4.1/dist/manifold.wasm")
+      setWasmUrl("https://unpkg.com/manifold-3d@3.4.1/manifold.wasm")
   }
   }
 
