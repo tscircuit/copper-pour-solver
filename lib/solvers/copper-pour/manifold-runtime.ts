@@ -14,7 +14,6 @@ let manifoldModulePromise: Promise<ManifoldToplevel> | null = null
 export const initializeManifoldGeometry = async () => {
   if (getManifoldModuleSync()) return
 
-  // Minimal fix for "Invalid URL" error in sandboxed environments
   try {
     new URL("test.wasm", import.meta.url)
   } catch (e) {
