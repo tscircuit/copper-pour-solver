@@ -17,7 +17,9 @@ export const initializeManifoldGeometry = async () => {
   try {
     new URL("test.wasm", import.meta.url)
   } catch (e) {
-    const isBrowser = typeof (globalThis as any).window !== "undefined"
+    const isBrowser =
+      typeof (globalThis as any).window !== "undefined" ||
+      typeof (globalThis as any).self !== "undefined"
     if (isBrowser) {
       setWasmUrl("https://unpkg.com/manifold-3d@3.4.1/manifold.wasm")
     }
