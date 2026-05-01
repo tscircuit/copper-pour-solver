@@ -16,6 +16,19 @@ solver.getOutput()
 // { brepShapes }
 ```
 
+## Manifold WASM in Browser Bundles
+
+Copper pour solving uses `manifold-3d`, which loads `manifold.wasm` at runtime.
+Node and Bun can usually resolve this automatically. Browser bundlers may need to
+provide the emitted WASM asset URL explicitly:
+
+```tsx
+import manifoldWasmUrl from "manifold-3d/manifold.wasm?url"
+import { initializeManifoldGeometry } from "@tscircuit/copper-pour-solver"
+
+await initializeManifoldGeometry({ wasmUrl: manifoldWasmUrl })
+```
+
 ## B-Rep Shapes
 
 We use the following representation for 2D b-rep shapes

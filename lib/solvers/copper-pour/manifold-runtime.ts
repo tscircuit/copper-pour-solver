@@ -11,19 +11,16 @@ import { describeScaledPolygons, type ScaledPolygons } from "./polygon-ring"
 
 let manifoldModulePromise: Promise<ManifoldToplevel> | null = null
 
-export const initializeManifoldGeometry = async () => {
+export const initializeManifoldGeometry = async (
+  options: { wasmUrl?: string | URL } = {},
+) => {
   if (getManifoldModuleSync()) return
 
-  try {
-    new URL("test.wasm", import.meta.url)
-  } catch (e) {
-    const isBrowser =
-      typeof (globalThis as any).window !== "undefined" ||
-      typeof (globalThis as any).self !== "undefined"
-    if (isBrowser) {
-      setWasmUrl("https://unpkg.com/manifold-3d@3.4.1/manifold.wasm")
-    }
+  if (options.wasmUrl) {
+    setWasmUrl(options.wasmUrl.toString())
   }
+
+
 
   manifoldModulePromise ??= getManifoldModule().catch((error) => {
     manifoldModulePromise = null
