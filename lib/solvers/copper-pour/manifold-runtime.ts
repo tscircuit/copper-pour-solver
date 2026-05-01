@@ -20,8 +20,6 @@ export const initializeManifoldGeometry = async (
     setWasmUrl(options.wasmUrl.toString())
   }
 
-
-
   manifoldModulePromise ??= getManifoldModule().catch((error) => {
     manifoldModulePromise = null
     throw error
