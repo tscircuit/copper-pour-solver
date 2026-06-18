@@ -55,3 +55,56 @@ export const segmentToPolygon = (
     y: centerY + point.x * sinAngle + point.y * cosAngle,
   }))
 }
+
+export const pillToPolygon = (
+  center: Point,
+  width: number,
+  height: number,
+  radius: number,
+  ccwRotation = 0,
+  numSegments = 32,
+): PolygonRing => {
+  if (radius <= 0) return []
+
+  const isVertical = height >= width
+  const centerlineLength = Math.max(width, height) - 2 * radius
+  const halfCenterline = Math.max(0, centerlineLength / 2)
+  const baseAngle = isVertical ? Math.PI / 2 : 0
+  const rotation = baseAngle + (ccwRotation * Math.PI) / 180
+
+  const cosAngle = Math.cos(rotation)
+  const sinAngle = Math.sin(rotation)
+  const start = {
+    x: center.x - halfCenterline * cosAngle,
+    y: center.y - halfCenterline * sinAngle,
+  }
+  const end = {
+    x: center.x + halfCenterline * cosAngle,
+    y: center.y + halfCenterline * sinAngle,
+  }
+
+  if (halfCenterline === 0) {
+    return circleToPolygon(center, radius, numSegments)
+  }
+
+  const points: PolygonRing = []
+  const halfSegments = Math.max(4, Math.floor(numSegments / 2))
+
+  for (let i = 0; i <= halfSegments; i++) {
+    const angle = rotation - Math.PI / 2 + (i / halfSegments) * Math.PI
+    points.push({
+      x: end.x + radius * Math.cos(angle),
+      y: end.y + radius * Math.sin(angle),
+    })
+  }
+
+  for (let i = 0; i <= halfSegments; i++) {
+    const angle = rotation + Math.PI / 2 + (i / halfSegments) * Math.PI
+    points.push({
+      x: start.x + radius * Math.cos(angle),
+      y: start.y + radius * Math.sin(angle),
+    })
+  }
+
+  return points
+}

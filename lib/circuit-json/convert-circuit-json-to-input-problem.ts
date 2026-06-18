@@ -17,6 +17,7 @@ import { getFullConnectivityMapFromCircuitJson } from "circuit-json-to-connectiv
 import type {
   InputCircularPad,
   InputPad,
+  InputPillPad,
   InputPolygonPad,
   InputProblem,
   InputRectPad,
@@ -81,6 +82,20 @@ export const convertCircuitJsonToInputProblem = (
           y: smtpad.y,
           radius: smtpad.radius!,
         } as InputCircularPad)
+      } else if (smtpad.shape === "pill" || smtpad.shape === "rotated_pill") {
+        pads.push({
+          shape: "pill",
+          padId: smtpad.pcb_smtpad_id,
+          layer: smtpad.layer,
+          connectivityKey,
+          x: smtpad.x,
+          y: smtpad.y,
+          width: smtpad.width!,
+          height: smtpad.height!,
+          radius: smtpad.radius!,
+          ccwRotation:
+            smtpad.shape === "rotated_pill" ? smtpad.ccw_rotation : 0,
+        } as InputPillPad)
       }
     } else if (elm.type === "pcb_plated_hole") {
       const platedHole = elm as PcbPlatedHole

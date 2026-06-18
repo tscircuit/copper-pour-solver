@@ -2,6 +2,7 @@ import type { Point } from "@tscircuit/math-utils"
 import type {
   InputCircularPad,
   InputPad,
+  InputPillPad,
   InputPolygonPad,
   InputRectPad,
   InputTracePad,
@@ -10,6 +11,7 @@ import { offsetPolygon } from "./manifold-geometry-adapter"
 import {
   boxToPolygon,
   circleToPolygon,
+  pillToPolygon,
   segmentToPolygon,
 } from "./polygon-primitives"
 import { normalizeRing, type PolygonRing } from "./polygon-ring"
@@ -23,6 +25,7 @@ const isTracePad = (pad: InputPad): pad is InputTracePad =>
   pad.shape === "trace"
 const isCircularPad = (pad: InputPad): pad is InputCircularPad =>
   pad.shape === "circle"
+const isPillPad = (pad: InputPad): pad is InputPillPad => pad.shape === "pill"
 const isPolygonPad = (pad: InputPad): pad is InputPolygonPad =>
   pad.shape === "polygon"
 
@@ -107,6 +110,20 @@ export const processObstaclesForPour = (
       const margin = isHoleOrCutout ? (cutoutMargin ?? 0) : padMargin
       polygonsToSubtract.push(
         circleToPolygon({ x: pad.x, y: pad.y }, pad.radius + margin),
+      )
+      continue
+    }
+
+    if (isPillPad(pad)) {
+      const margin = isHoleOrCutout ? (cutoutMargin ?? 0) : padMargin
+      polygonsToSubtract.push(
+        pillToPolygon(
+          { x: pad.x, y: pad.y },
+          pad.width + margin * 2,
+          pad.height + margin * 2,
+          pad.radius + margin,
+          pad.ccwRotation,
+        ),
       )
       continue
     }
