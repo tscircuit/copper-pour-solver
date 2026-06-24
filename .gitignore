@@ -4,6 +4,8 @@ node_modules
 # output
 out
 dist
+cosmos-export
+/index.html
 *.tgz
 
 # code coverage
@@ -37,3 +39,4 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .aider*
 
 *.diff.png
+.vercel
