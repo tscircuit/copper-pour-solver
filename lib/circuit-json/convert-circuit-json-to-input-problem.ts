@@ -13,7 +13,6 @@ import type {
   SourcePort,
   SourceTrace,
 } from "circuit-json"
-import { getFullConnectivityMapFromCircuitJson } from "circuit-json-to-connectivity-map"
 import type {
   InputCircularPad,
   InputPad,
@@ -42,7 +41,75 @@ export const convertCircuitJsonToInputProblem = (
 
   if (!pcb_board) throw new Error("No pcb_board found in circuit json")
 
-  const connectivityMap = getFullConnectivityMapFromCircuitJson(circuitJson)
+  const sourceConnectivityKeyById = new Map<string, string>()
+  const sourcePortIdByPcbPortId = new Map<string, string>()
+
+  for (const elm of circuitJson) {
+    if (
+      (elm.type === "source_net" ||
+        elm.type === "source_port" ||
+        elm.type === "source_trace") &&
+      "subcircuit_connectivity_map_key" in elm &&
+      typeof elm.subcircuit_connectivity_map_key === "string"
+    ) {
+      const sourceElm = elm as SourceNet | SourcePort | SourceTrace
+      const connectivityKey = sourceElm.subcircuit_connectivity_map_key
+      const sourceId =
+        sourceElm.type === "source_net"
+          ? sourceElm.source_net_id
+          : sourceElm.type === "source_port"
+            ? sourceElm.source_port_id
+            : sourceElm.source_trace_id
+      if (sourceId && connectivityKey) {
+        sourceConnectivityKeyById.set(sourceId, connectivityKey)
+      }
+    } else if (elm.type === "pcb_port") {
+      const pcbPort = elm as PcbPort
+      if (pcbPort.source_port_id) {
+        sourcePortIdByPcbPortId.set(pcbPort.pcb_port_id, pcbPort.source_port_id)
+      }
+    }
+  }
+
+  const getConnectivityKeyFromSourceRef = (sourceRef: string | undefined) =>
+    sourceRef ? sourceConnectivityKeyById.get(sourceRef) : undefined
+
+  const sourceConnectivityEntries = Array.from(
+    sourceConnectivityKeyById.entries(),
+  ).sort((a, b) => b[0].length - a[0].length)
+
+  const getConnectivityKeyFromGeneratedId = (id: string | undefined) => {
+    if (!id) return undefined
+    for (const [sourceId, connectivityKey] of sourceConnectivityEntries) {
+      if (id === sourceId || id.startsWith(`${sourceId}_`)) {
+        return connectivityKey
+      }
+    }
+  }
+
+  const getConnectivityKeyFromPcbPort = (pcbPortId: string | undefined) =>
+    getConnectivityKeyFromSourceRef(
+      pcbPortId ? sourcePortIdByPcbPortId.get(pcbPortId) : undefined,
+    )
+
+  const getConnectivityKeyForTrace = (trace: PcbTrace) => {
+    const sourceTraceKey = getConnectivityKeyFromSourceRef(
+      trace.source_trace_id,
+    )
+    if (sourceTraceKey) return sourceTraceKey
+
+    const generatedIdKey =
+      getConnectivityKeyFromGeneratedId(trace.source_trace_id) ??
+      getConnectivityKeyFromGeneratedId(trace.pcb_trace_id)
+    if (generatedIdKey) return generatedIdKey
+
+    for (const routePoint of trace.route as any[]) {
+      const key =
+        getConnectivityKeyFromPcbPort(routePoint.start_pcb_port_id) ??
+        getConnectivityKeyFromPcbPort(routePoint.end_pcb_port_id)
+      if (key) return key
+    }
+  }
 
   const pads: InputPad[] = []
 
@@ -51,10 +118,7 @@ export const convertCircuitJsonToInputProblem = (
       const smtpad = elm as PcbSmtPad
       if (smtpad.layer !== options.layer) continue
 
-      let connectivityKey: string | undefined
-      connectivityKey = connectivityMap.getNetConnectedToId(
-        smtpad.pcb_smtpad_id,
-      )
+      let connectivityKey = getConnectivityKeyFromPcbPort(smtpad.pcb_port_id)
       if (!connectivityKey) {
         connectivityKey = `unconnected:${smtpad.pcb_smtpad_id}`
       }
@@ -101,8 +165,8 @@ export const convertCircuitJsonToInputProblem = (
       const platedHole = elm as PcbPlatedHole
       if (!platedHole.layers.includes(options.layer)) continue
 
-      let connectivityKey = connectivityMap.getNetConnectedToId(
-        platedHole.pcb_plated_hole_id,
+      let connectivityKey = getConnectivityKeyFromPcbPort(
+        (platedHole as any).pcb_port_id,
       )
       if (!connectivityKey) {
         connectivityKey = `unconnected-plated-hole:${platedHole.pcb_plated_hole_id}`
@@ -189,7 +253,11 @@ export const convertCircuitJsonToInputProblem = (
       if (!via.layers.includes(options.layer)) continue
 
       const connectivityKey: string =
-        connectivityMap.getNetConnectedToId(via.pcb_via_id) ??
+        getConnectivityKeyFromSourceRef((via as any).source_trace_id) ??
+        getConnectivityKeyFromSourceRef((via as any).source_net_id) ??
+        getConnectivityKeyFromPcbPort((via as any).pcb_port_id) ??
+        getConnectivityKeyFromGeneratedId((via as any).pcb_trace_id) ??
+        getConnectivityKeyFromGeneratedId(via.pcb_via_id) ??
         `unconnected-via:${via.pcb_via_id}`
 
       pads.push({
@@ -203,9 +271,7 @@ export const convertCircuitJsonToInputProblem = (
       } as InputCircularPad)
     } else if (elm.type === "pcb_trace") {
       const trace = elm as PcbTrace
-      const connectivityKey = connectivityMap.getNetConnectedToId(
-        trace.pcb_trace_id,
-      )
+      const connectivityKey = getConnectivityKeyForTrace(trace)
       if (!connectivityKey) continue
 
       let currentSegmentGroup: Point[] = []
