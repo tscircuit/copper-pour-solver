@@ -71,7 +71,7 @@ const circuitJson: AnyCircuitElement[] = [
 const getInputProblem = () =>
   convertCircuitJsonToInputProblem(circuitJson, {
     layer: "top",
-    pour_connectivity_key: "net:GND",
+    subcircuit_connectivity_map_key: "net:GND",
     pad_margin: 0.15,
     trace_margin: 0.15,
   })
