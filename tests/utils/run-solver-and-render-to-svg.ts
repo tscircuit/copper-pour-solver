@@ -8,7 +8,6 @@ import type {
   PcbCopperPourBRep,
   SourceNet,
 } from "circuit-json"
-import { getFullConnectivityMapFromCircuitJson } from "circuit-json-to-connectivity-map"
 import { convertCircuitJsonToPcbSvg } from "circuit-to-svg"
 import type { Point } from "@tscircuit/math-utils"
 
@@ -30,7 +29,6 @@ export const runSolverAndRenderToSvg = (
     ? pour_options
     : [pour_options]
 
-  const connectivityMap = getFullConnectivityMapFromCircuitJson(circuitJson)
   const allCopperPours: PcbCopperPourBRep[] = []
 
   for (const options of pourOptionsArray) {
@@ -43,21 +41,13 @@ export const runSolverAndRenderToSvg = (
       throw new Error(`Net with name "${options.net_name}" not found`)
     }
 
-    let pour_connectivity_key = connectivityMap.getNetConnectedToId(
-      source_net.source_net_id,
-    )
-
-    if (!pour_connectivity_key && source_net.subcircuit_connectivity_map_key) {
-      pour_connectivity_key = source_net.subcircuit_connectivity_map_key
-    }
-
-    if (!pour_connectivity_key) {
+    if (!source_net.subcircuit_connectivity_map_key) {
       throw new Error(`Net "${options.net_name}" has no connectivity mapping`)
     }
 
     const inputProblem = convertCircuitJsonToInputProblem(circuitJson, {
       ...options,
-      pour_connectivity_key,
+      pour_connectivity_key: source_net.subcircuit_connectivity_map_key,
     })
 
     const solver = new CopperPourPipelineSolver(inputProblem)
