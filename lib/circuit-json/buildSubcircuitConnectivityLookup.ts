@@ -17,7 +17,12 @@ export const buildSubcircuitConnectivityLookup = (
     }
   }
 
-  const generatedNetIdToSubcircuitConnectivityKey: Record<string, string> = {}
+  const generatedNetIdToSubcircuitConnectivityKeys: Record<
+    string,
+    Set<string>
+  > = {}
+  const subcircuitConnectivityKeyToAliases: Record<string, Set<string>> = {}
+
   for (const [generatedNetId, connectedIds] of Object.entries(
     connectivityMap.netMap,
   )) {
@@ -26,14 +31,18 @@ export const buildSubcircuitConnectivityLookup = (
         .map((id) => idToSubcircuitConnectivityKey[id])
         .filter((key): key is string => Boolean(key)),
     )
-    if (connectedSubcircuitKeys.size > 1) {
-      throw new Error(
-        `Multiple subcircuit connectivity keys found for generated connectivity map net "${generatedNetId}": ${Array.from(connectedSubcircuitKeys).join(", ")}`,
-      )
-    }
-    const subcircuitKey = connectedSubcircuitKeys.values().next().value
-    if (subcircuitKey) {
-      generatedNetIdToSubcircuitConnectivityKey[generatedNetId] = subcircuitKey
+    if (connectedSubcircuitKeys.size > 0) {
+      generatedNetIdToSubcircuitConnectivityKeys[generatedNetId] =
+        connectedSubcircuitKeys
+
+      for (const subcircuitKey of connectedSubcircuitKeys) {
+        const aliases =
+          subcircuitConnectivityKeyToAliases[subcircuitKey] ?? new Set()
+        for (const alias of connectedSubcircuitKeys) {
+          aliases.add(alias)
+        }
+        subcircuitConnectivityKeyToAliases[subcircuitKey] = aliases
+      }
     }
   }
 
@@ -48,7 +57,12 @@ export const buildSubcircuitConnectivityLookup = (
       const generatedNetId = connectivityMap.getNetConnectedToId(id)
       if (!generatedNetId) return undefined
 
-      return generatedNetIdToSubcircuitConnectivityKey[generatedNetId]
+      return generatedNetIdToSubcircuitConnectivityKeys[generatedNetId]
+        ?.values()
+        .next().value
+    },
+    getEquivalentSubcircuitConnectivityKeys(key: string): Set<string> {
+      return subcircuitConnectivityKeyToAliases[key] ?? new Set([key])
     },
   }
 }

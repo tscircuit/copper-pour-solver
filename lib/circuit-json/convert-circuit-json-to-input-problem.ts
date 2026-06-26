@@ -33,13 +33,22 @@ export const convertCircuitJsonToInputProblem = (
   if (!pcb_board) throw new Error("No pcb_board found in circuit json")
 
   const connectivityMap = getFullConnectivityMapFromCircuitJson(circuitJson)
-  const { knownSubcircuitConnectivityKeys, getSubcircuitConnectivityKeyForId } =
-    buildSubcircuitConnectivityLookup(circuitJson, connectivityMap)
+  const {
+    knownSubcircuitConnectivityKeys,
+    getSubcircuitConnectivityKeyForId,
+    getEquivalentSubcircuitConnectivityKeys,
+  } = buildSubcircuitConnectivityLookup(circuitJson, connectivityMap)
   const pourConnectivityKey = resolvePourConnectivityKey(
     circuitJson,
     options,
     knownSubcircuitConnectivityKeys,
   )
+  const pourConnectivityAliases =
+    getEquivalentSubcircuitConnectivityKeys(pourConnectivityKey)
+  const normalizeConnectivityKey = (connectivityKey: string) =>
+    pourConnectivityAliases.has(connectivityKey)
+      ? pourConnectivityKey
+      : connectivityKey
 
   const pads: InputPad[] = []
 
@@ -53,6 +62,7 @@ export const convertCircuitJsonToInputProblem = (
       if (!connectivityKey) {
         connectivityKey = `unconnected:${smtpad.pcb_smtpad_id}`
       }
+      connectivityKey = normalizeConnectivityKey(connectivityKey)
 
       if (smtpad.shape === "rect") {
         pads.push({
@@ -102,6 +112,7 @@ export const convertCircuitJsonToInputProblem = (
       if (!connectivityKey) {
         connectivityKey = `unconnected-plated-hole:${platedHole.pcb_plated_hole_id}`
       }
+      connectivityKey = normalizeConnectivityKey(connectivityKey)
 
       if (platedHole.shape === "circle") {
         pads.push({
@@ -183,9 +194,10 @@ export const convertCircuitJsonToInputProblem = (
       const via = elm as PcbVia
       if (!via.layers.includes(options.layer)) continue
 
-      const connectivityKey: string =
+      const connectivityKey: string = normalizeConnectivityKey(
         getSubcircuitConnectivityKeyForId(via.pcb_via_id) ??
-        `unconnected-via:${via.pcb_via_id}`
+          `unconnected-via:${via.pcb_via_id}`,
+      )
 
       pads.push({
         shape: "circle",
@@ -198,10 +210,11 @@ export const convertCircuitJsonToInputProblem = (
       } as InputCircularPad)
     } else if (elm.type === "pcb_trace") {
       const trace = elm as PcbTrace
-      const connectivityKey = getSubcircuitConnectivityKeyForId(
+      let connectivityKey = getSubcircuitConnectivityKeyForId(
         trace.pcb_trace_id,
       )
       if (!connectivityKey) continue
+      connectivityKey = normalizeConnectivityKey(connectivityKey)
 
       let currentSegmentGroup: Point[] = []
       let currentWidth: number | null = null
