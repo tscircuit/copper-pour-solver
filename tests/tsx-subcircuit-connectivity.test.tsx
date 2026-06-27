@@ -16,8 +16,16 @@ const SubcircuitChild = () => (
     pcbY={0}
     autorouter="sequential_trace"
   >
-    <resistor name="R1" resistance="10k" footprint="0805" pcbX={0} pcbY={0} />
-    <trace from=".R1 > .pin2" to="net.GND" />
+    <pinheader
+      name="J2"
+      pinCount={2}
+      footprint="pinrow2"
+      pcbX={0}
+      pcbY={0}
+      pinLabels={{ pin1: "B", pin2: "C" }}
+      showSilkscreenPinLabels
+      connections={{ C: "net.GND" }}
+    />
   </subcircuit>
 )
 
@@ -34,12 +42,14 @@ const SubcircuitConnectivityRepro = () => (
       footprint="pinrow1"
       pcbX={-3}
       pcbY={0}
-      connections={{ pin1: "net.GND" }}
+      pinLabels={{ pin1: "A" }}
+      showSilkscreenPinLabels
+      connections={{ A: "net.GND" }}
     />
 
     <SubcircuitChild />
 
-    <trace from=".J1 > .pin1" to=".SubcircuitChild > net.GND" />
+    <trace from="J1.A" to=".SubcircuitChild > net.GND" />
 
     <copperpour
       name="top_gnd_pour"
@@ -52,40 +62,24 @@ const SubcircuitConnectivityRepro = () => (
     <pcbnotetext
       text="Expected: copper pour connects to A and C, but clears around B."
       pcbX={0}
-      pcbY={4.05}
-      fontSize="0.22mm"
-      anchorAlignment="center"
-      color="#ffffff"
-    />
-    <pcbnotetext
-      text="A=J1 pin1, B=R1 pin1, C=R1 pin2."
-      pcbX={0}
       pcbY={4.35}
       fontSize="0.22mm"
       anchorAlignment="center"
       color="#ffffff"
     />
     <pcbnotetext
-      text="A"
-      pcbX={-3}
-      pcbY={-1.05}
-      fontSize="0.48mm"
+      text="A is parent net.GND; C is child net.GND reached through the parent-to-child net."
+      pcbX={0}
+      pcbY={4.05}
+      fontSize="0.22mm"
       anchorAlignment="center"
       color="#ffffff"
     />
     <pcbnotetext
-      text="B"
-      pcbX={1.1}
-      pcbY={-1.05}
-      fontSize="0.48mm"
-      anchorAlignment="center"
-      color="#ffffff"
-    />
-    <pcbnotetext
-      text="C"
-      pcbX={2.9}
-      pcbY={-1.05}
-      fontSize="0.48mm"
+      text="B is a separate child pin, so the pour should clear around it."
+      pcbX={0}
+      pcbY={3.75}
+      fontSize="0.22mm"
       anchorAlignment="center"
       color="#ffffff"
     />
