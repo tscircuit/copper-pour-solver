@@ -201,10 +201,7 @@ const runSubcircuitConnectivityCase = async ({
     ...copperPours,
   ] as any)
 
-  await expect(svg).toMatchSvgSnapshot(
-    import.meta.path,
-    snapshotName,
-  )
+  await expect(svg).toMatchSvgSnapshot(import.meta.path, snapshotName)
 }
 
 test("tsx subcircuit connectivity 01 connects child net through parent-to-child trace", async () => {
