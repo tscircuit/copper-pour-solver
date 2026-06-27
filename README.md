@@ -67,11 +67,20 @@ const gnd = circuitJson.find(
 
 const inputProblem = convertCircuitJsonToInputProblem(circuitJson, {
   layer: "top",
+  subcircuit_id: gnd.subcircuit_id,
   subcircuit_connectivity_map_key: gnd.subcircuit_connectivity_map_key,
   pad_margin: 0.4,
   trace_margin: 0.2,
 })
 ```
+
+Pass `subcircuit_id` when selecting a net inside a subcircuit. The converter
+considers that subcircuit and its child subcircuits, but it does not treat
+matching child `subcircuit_connectivity_map_key` values as connected unless the
+Circuit JSON connectivity actually connects them. Internally, the generated
+`globalConnectivityMap` is kept separate from the scoped
+`subcircuitConnectivityMap`; scoped solver connectivity keys are prefixed with
+their subcircuit id.
 
 Do not generate or pass ids from `circuit-json-to-connectivity-map`. The
 converter handles PCB connectivity internally and normalizes it to stable

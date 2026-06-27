@@ -32,14 +32,19 @@ export const convertCircuitJsonToInputProblem = (
 
   if (!pcb_board) throw new Error("No pcb_board found in circuit json")
 
-  const connectivityMap = getFullConnectivityMapFromCircuitJson(circuitJson)
-  const { knownSubcircuitConnectivityKeys, getSubcircuitConnectivityKeyForId } =
-    buildSubcircuitConnectivityLookup(circuitJson, connectivityMap)
+  const globalConnectivityMap =
+    getFullConnectivityMapFromCircuitJson(circuitJson)
+  const subcircuitConnectivityMap = buildSubcircuitConnectivityLookup(
+    circuitJson,
+    globalConnectivityMap,
+    options.subcircuit_id,
+  )
   const pourConnectivityKey = resolvePourConnectivityKey(
     circuitJson,
     options,
-    knownSubcircuitConnectivityKeys,
+    subcircuitConnectivityMap,
   )
+  const { getSubcircuitConnectivityKeyForId } = subcircuitConnectivityMap
 
   const pads: InputPad[] = []
 
