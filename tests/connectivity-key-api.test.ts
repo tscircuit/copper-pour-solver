@@ -2,6 +2,7 @@ import { expect, test } from "bun:test"
 import type { AnyCircuitElement } from "circuit-json"
 import { getFullConnectivityMapFromCircuitJson } from "circuit-json-to-connectivity-map"
 import { convertCircuitJsonToInputProblem } from "lib/circuit-json/convert-circuit-json-to-input-problem"
+import subcircuitConnectivityScopeCircuitJson from "./assets/subcircuit-connectivity-scope.json"
 
 const circuitJson = [
   {
@@ -97,4 +98,49 @@ test("circuit-json adapter rejects generated connectivity map keys", () => {
       trace_margin: 0.2,
     }),
   ).toThrow(/subcircuit_connectivity_map_key/)
+})
+
+test("subcircuit_id scopes repeated subcircuit connectivity keys", () => {
+  const inputProblem = convertCircuitJsonToInputProblem(
+    subcircuitConnectivityScopeCircuitJson as AnyCircuitElement[],
+    {
+      layer: "top",
+      subcircuit_id: "subcircuit_child_a",
+      subcircuit_connectivity_map_key: "net0",
+      pad_margin: 0.2,
+      trace_margin: 0.2,
+    },
+  )
+
+  const childAPad = inputProblem.pads.find(
+    (pad) => pad.padId === "pcb_smtpad_child_a_gnd",
+  )
+  const childBPad = inputProblem.pads.find(
+    (pad) => pad.padId === "pcb_smtpad_child_b_gnd",
+  )
+
+  expect(inputProblem.regionsForPour[0]?.connectivityKey).toBe(
+    "subcircuit:subcircuit_child_a:connectivity:net0",
+  )
+  expect(childAPad?.connectivityKey).toBe(
+    inputProblem.regionsForPour[0]?.connectivityKey,
+  )
+  expect(childBPad?.connectivityKey).not.toBe(
+    inputProblem.regionsForPour[0]?.connectivityKey,
+  )
+})
+
+test("parent subcircuit selection rejects ambiguous child connectivity keys", () => {
+  expect(() =>
+    convertCircuitJsonToInputProblem(
+      subcircuitConnectivityScopeCircuitJson as AnyCircuitElement[],
+      {
+        layer: "top",
+        subcircuit_id: "subcircuit_parent",
+        subcircuit_connectivity_map_key: "net0",
+        pad_margin: 0.2,
+        trace_margin: 0.2,
+      },
+    ),
+  ).toThrow(/multiple subcircuits/)
 })

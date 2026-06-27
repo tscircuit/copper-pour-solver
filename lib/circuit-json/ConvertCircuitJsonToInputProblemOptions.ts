@@ -2,6 +2,7 @@ import type { LayerRef, Point } from "circuit-json"
 
 export interface ConvertCircuitJsonToInputProblemOptions {
   layer: LayerRef
+  subcircuit_id?: string
   source_net_id?: string
   source_net_name?: string
   subcircuit_connectivity_map_key?: string
