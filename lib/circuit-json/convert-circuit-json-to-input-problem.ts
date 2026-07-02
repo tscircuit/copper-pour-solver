@@ -136,6 +136,26 @@ export const convertCircuitJsonToInputProblem = (
             maxY: platedHole.y + rectHeight / 2,
           },
         } as InputRectPad)
+      } else if (platedHole.shape === "pill" || platedHole.shape === "oval") {
+        // Pill / oval plated holes have no circle/rect branch above, so without this they are
+        // dropped from the pad list entirely and a pour floods solid over them with no anti-pad.
+        // Emit the copper extent (outer_width/height) as a pill pad, mirroring the pill smtpad
+        // handling above.
+        if (platedHole.outer_width > 0 && platedHole.outer_height > 0) {
+          pads.push({
+            shape: "pill",
+            padId: platedHole.pcb_plated_hole_id,
+            layer: options.layer,
+            connectivityKey,
+            x: platedHole.x,
+            y: platedHole.y,
+            width: platedHole.outer_width,
+            height: platedHole.outer_height,
+            radius:
+              Math.min(platedHole.outer_width, platedHole.outer_height) / 2,
+            ccwRotation: platedHole.ccw_rotation ?? 0,
+          } as InputPillPad)
+        }
       }
     } else if (elm.type === "pcb_hole") {
       const hole = elm as PcbHole
