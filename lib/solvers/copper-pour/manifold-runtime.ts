@@ -1,22 +1,12 @@
-import type {
-  CrossSection as CrossSectionType,
-  ManifoldToplevel,
-} from "manifold-3d"
 import {
   getManifoldModule,
   getManifoldModuleSync,
-} from "manifold-3d/lib/wasm.js"
+  type CrossSection as CrossSectionType,
+} from "@tscircuit/manifold-2d"
 import { describeScaledPolygons, type ScaledPolygons } from "./polygon-ring"
 
-let manifoldModulePromise: Promise<ManifoldToplevel> | null = null
-
 export const initializeManifoldGeometry = async () => {
-  if (getManifoldModuleSync()) return
-  manifoldModulePromise ??= getManifoldModule().catch((error) => {
-    manifoldModulePromise = null
-    throw error
-  })
-  await manifoldModulePromise
+  await getManifoldModule()
 }
 
 export const isManifoldGeometryInitialized = () =>
