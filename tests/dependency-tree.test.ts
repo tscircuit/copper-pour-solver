@@ -6,5 +6,8 @@ test("manifold does not add transitive production dependencies", () => {
   expect(packageJson.dependencies["@tscircuit/manifold-2d"]).toBe(
     "https://jscdn.tscircuit.com/@tscircuit/manifold-2d/0.0.3.tgz",
   )
-  expect(manifoldPackageJson.dependencies ?? {}).toEqual({})
+  const manifest = manifoldPackageJson as {
+    dependencies?: Record<string, string>
+  }
+  expect(manifest.dependencies ?? {}).toEqual({})
 })
