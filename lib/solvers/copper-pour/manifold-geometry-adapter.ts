@@ -1,4 +1,4 @@
-import type { FillRule } from "manifold-3d"
+import type { FillRule } from "@tscircuit/manifold-2d"
 import {
   getCrossSection,
   runManifoldOperation,

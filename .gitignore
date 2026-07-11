@@ -40,3 +40,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 *.diff.png
 .vercel
+
+# Standalone package repository (kept as a sibling locally)
+/manifold-2d/

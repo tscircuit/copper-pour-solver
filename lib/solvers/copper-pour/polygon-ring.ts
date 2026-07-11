@@ -1,5 +1,5 @@
 import type { Point } from "@tscircuit/math-utils"
-import type { SimplePolygon } from "manifold-3d"
+import type { SimplePolygon } from "@tscircuit/manifold-2d"
 
 export const MANIFOLD_GEOMETRY_SCALE = 1_000_000
 

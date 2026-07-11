@@ -33,6 +33,6 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "manifold-3d": "^3.4.1"
+    "@tscircuit/manifold-2d": "https://jscdn.tscircuit.com/@tscircuit/manifold-2d/0.0.3.tgz"
   }
 }
