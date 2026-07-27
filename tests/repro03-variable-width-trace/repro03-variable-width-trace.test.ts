@@ -63,7 +63,7 @@ const circuitJson = [
   },
 ] as AnyCircuitElement[]
 
-test("repro03 drops later widths when converting a variable-width trace", () => {
+test("repro03 preserves widths when converting a variable-width trace", () => {
   const inputProblem = convertCircuitJsonToInputProblem(circuitJson, {
     layer: "top",
     source_net_id: "source_net_gnd",
@@ -75,7 +75,22 @@ test("repro03 drops later widths when converting a variable-width trace", () => 
     (pad): pad is InputTracePad => pad.shape === "trace",
   )
 
-  // Repro: the 1 mm portion is lost, so its copper-pour clearance is
-  // incorrectly calculated using the initial 0.4 mm width.
-  expect(tracePads.map((pad) => pad.width)).toEqual([0.4])
+  expect(tracePads.map(({ width, segments }) => ({ width, segments }))).toEqual(
+    [
+      {
+        width: 0.4,
+        segments: [
+          { x: -2, y: 0 },
+          { x: 0, y: 0 },
+        ],
+      },
+      {
+        width: 1,
+        segments: [
+          { x: 0, y: 0 },
+          { x: 2, y: 0 },
+        ],
+      },
+    ],
+  )
 })

@@ -18,8 +18,8 @@ import type {
   InputRectPad,
   InputTracePad,
 } from "lib/types"
-import type { ConvertCircuitJsonToInputProblemOptions } from "./ConvertCircuitJsonToInputProblemOptions"
 import { buildSubcircuitConnectivityLookup } from "./buildSubcircuitConnectivityLookup"
+import type { ConvertCircuitJsonToInputProblemOptions } from "./ConvertCircuitJsonToInputProblemOptions"
 import { resolvePourConnectivityKey } from "./resolvePourConnectivityKey"
 
 export const convertCircuitJsonToInputProblem = (
@@ -231,8 +231,17 @@ export const convertCircuitJsonToInputProblem = (
         const isWireOnLayer =
           ri.route_type === "wire" && ri.layer === options.layer
         if (isWireOnLayer) {
-          if (currentWidth === null) currentWidth = ri.width
-          currentSegmentGroup.push({ x: ri.x, y: ri.y })
+          const point = { x: ri.x, y: ri.y }
+
+          if (currentWidth === null) {
+            currentWidth = ri.width
+          } else if (ri.width !== currentWidth) {
+            currentSegmentGroup.push(point)
+            commitGroup()
+            currentWidth = ri.width
+          }
+
+          currentSegmentGroup.push(point)
         } else {
           commitGroup()
         }
