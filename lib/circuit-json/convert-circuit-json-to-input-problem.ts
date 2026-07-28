@@ -118,6 +118,19 @@ export const convertCircuitJsonToInputProblem = (
           y: platedHole.y,
           radius: platedHole.outer_diameter / 2,
         } as InputCircularPad)
+      } else if (platedHole.shape === "pill") {
+        pads.push({
+          shape: "pill",
+          padId: platedHole.pcb_plated_hole_id,
+          layer: options.layer,
+          connectivityKey,
+          x: platedHole.x,
+          y: platedHole.y,
+          width: platedHole.outer_width,
+          height: platedHole.outer_height,
+          radius: Math.min(platedHole.outer_width, platedHole.outer_height) / 2,
+          ccwRotation: platedHole.ccw_rotation,
+        } as InputPillPad)
       } else if (platedHole.shape === "circular_hole_with_rect_pad") {
         const rectWidth = platedHole.rect_pad_width
         const rectHeight = platedHole.rect_pad_height

@@ -66,6 +66,23 @@ const circuitJson: AnyCircuitElement[] = [
     port_hints: ["rotated_pill"],
     is_covered_with_solder_mask: false,
   },
+  {
+    type: "pcb_plated_hole",
+    pcb_plated_hole_id: "pcb_plated_hole_usb_shield",
+    pcb_component_id: "pcb_component_usb",
+    pcb_port_id: "pcb_port_usb_shield",
+    shape: "pill",
+    x: 5.5,
+    y: 0,
+    outer_width: 1.1,
+    outer_height: 2,
+    hole_width: 0.6,
+    hole_height: 1.5,
+    ccw_rotation: 180,
+    layers: ["top", "bottom"],
+    port_hints: ["shield"],
+    is_covered_with_solder_mask: false,
+  },
 ] as AnyCircuitElement[]
 
 const getInputProblem = () =>
@@ -100,19 +117,27 @@ test("pill and rotated pill pads clear copper pour", () => {
 
   const pillPads = inputProblem.pads.filter((pad) => pad.shape === "pill")
 
-  expect(pillPads).toHaveLength(17)
+  expect(pillPads).toHaveLength(18)
   expect(
     pillPads.some(
       (pad) =>
         pad.padId === "pcb_smtpad_rotated_pill" && pad.ccwRotation === 90,
     ),
   ).toBe(true)
+  expect(
+    pillPads.find((pad) => pad.padId === "pcb_plated_hole_usb_shield"),
+  ).toMatchObject({
+    width: 1.1,
+    height: 2,
+    radius: 0.55,
+    ccwRotation: 180,
+  })
 
   const solver = new CopperPourPipelineSolver(inputProblem)
   const output = solver.getOutput()
 
   expect(output.brep_shapes).toHaveLength(1)
-  expect(output.brep_shapes[0]!.inner_rings).toHaveLength(17)
+  expect(output.brep_shapes[0]!.inner_rings).toHaveLength(18)
 })
 
 test("pill and rotated pill copper pour svg snapshot", async () => {
