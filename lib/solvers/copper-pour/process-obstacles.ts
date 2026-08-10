@@ -5,6 +5,7 @@ import type {
   InputPillPad,
   InputPolygonPad,
   InputRectPad,
+  InputRotatedRectPad,
   InputTracePad,
 } from "lib/types"
 import { offsetPolygon } from "./manifold-geometry-adapter"
@@ -12,6 +13,7 @@ import {
   boxToPolygon,
   circleToPolygon,
   pillToPolygon,
+  rotatedBoxToPolygon,
   segmentToPolygon,
 } from "./polygon-primitives"
 import { normalizeRing, type PolygonRing } from "./polygon-ring"
@@ -21,6 +23,8 @@ interface ProcessedObstacles {
 }
 
 const isRectPad = (pad: InputPad): pad is InputRectPad => pad.shape === "rect"
+const isRotatedRectPad = (pad: InputPad): pad is InputRotatedRectPad =>
+  pad.shape === "rotated_rect"
 const isTracePad = (pad: InputPad): pad is InputTracePad =>
   pad.shape === "trace"
 const isCircularPad = (pad: InputPad): pad is InputCircularPad =>
@@ -137,6 +141,19 @@ export const processObstaclesForPour = (
           bounds.minY - margin,
           bounds.maxX + margin,
           bounds.maxY + margin,
+        ),
+      )
+      continue
+    }
+
+    if (isRotatedRectPad(pad)) {
+      const margin = isHoleOrCutout ? (cutoutMargin ?? 0) : padMargin
+      polygonsToSubtract.push(
+        rotatedBoxToPolygon(
+          { x: pad.x, y: pad.y },
+          pad.width + margin * 2,
+          pad.height + margin * 2,
+          pad.ccwRotation,
         ),
       )
       continue

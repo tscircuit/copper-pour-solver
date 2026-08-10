@@ -24,6 +24,15 @@ export interface InputRectPad extends BaseInputPad {
   bounds: Bounds
 }
 
+export interface InputRotatedRectPad extends BaseInputPad {
+  shape: "rotated_rect"
+  x: number
+  y: number
+  width: number
+  height: number
+  ccwRotation: number
+}
+
 export interface InputCircularPad extends BaseInputPad {
   shape: "circle"
   x: number
@@ -54,6 +63,7 @@ export interface InputPolygonPad extends BaseInputPad {
 
 export type InputPad =
   | InputRectPad
+  | InputRotatedRectPad
   | InputCircularPad
   | InputPillPad
   | InputTracePad
