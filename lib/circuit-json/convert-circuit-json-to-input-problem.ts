@@ -16,6 +16,7 @@ import type {
   InputPolygonPad,
   InputProblem,
   InputRectPad,
+  InputRotatedRectPad,
   InputTracePad,
 } from "lib/types"
 import { buildSubcircuitConnectivityLookup } from "./buildSubcircuitConnectivityLookup"
@@ -72,6 +73,18 @@ export const convertCircuitJsonToInputProblem = (
             maxY: smtpad.y + smtpad.height! / 2,
           },
         } as InputRectPad)
+      } else if (smtpad.shape === "rotated_rect") {
+        pads.push({
+          shape: "rotated_rect",
+          padId: smtpad.pcb_smtpad_id,
+          layer: smtpad.layer,
+          connectivityKey,
+          x: smtpad.x,
+          y: smtpad.y,
+          width: smtpad.width,
+          height: smtpad.height,
+          ccwRotation: smtpad.ccw_rotation,
+        } as InputRotatedRectPad)
       } else if (smtpad.shape === "circle") {
         pads.push({
           shape: "circle",

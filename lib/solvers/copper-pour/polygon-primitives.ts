@@ -29,6 +29,29 @@ export const boxToPolygon = (
   { x: minX, y: maxY },
 ]
 
+export const rotatedBoxToPolygon = (
+  center: Point,
+  width: number,
+  height: number,
+  ccwRotation: number,
+): PolygonRing => {
+  const halfWidth = width / 2
+  const halfHeight = height / 2
+  const rotation = (ccwRotation * Math.PI) / 180
+  const cosRotation = Math.cos(rotation)
+  const sinRotation = Math.sin(rotation)
+
+  return [
+    { x: -halfWidth, y: -halfHeight },
+    { x: halfWidth, y: -halfHeight },
+    { x: halfWidth, y: halfHeight },
+    { x: -halfWidth, y: halfHeight },
+  ].map((point) => ({
+    x: center.x + point.x * cosRotation - point.y * sinRotation,
+    y: center.y + point.x * sinRotation + point.y * cosRotation,
+  }))
+}
+
 export const segmentToPolygon = (
   start: Point,
   end: Point,

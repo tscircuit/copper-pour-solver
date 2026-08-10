@@ -58,7 +58,7 @@ const RotatedRectPadRepro = () => (
   </board>
 )
 
-test("repro05 rotated_rect pads are omitted from copper-pour obstacles", async () => {
+test("rotated_rect pads are cleared by copper pours", async () => {
   const circuit = new Circuit()
   circuit.add(<RotatedRectPadRepro />)
   await circuit.renderUntilSettled()
