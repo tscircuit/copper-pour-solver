@@ -37,7 +37,7 @@ const DifferentNetPourOverlapRepro = () => (
     />
 
     <pcbnotetext
-      text="Different-net bottom pours must not overlap"
+      text="Different-net bottom pours are mutually cleared"
       pcbY={5.15}
       fontSize="0.45mm"
       color="#ffffff"
@@ -86,20 +86,20 @@ const DifferentNetPourOverlapRepro = () => (
       color="#facc15"
     />
     <pcbnoteline
-      x1={-0.4}
-      y1={-0.4}
-      x2={0.4}
-      y2={0.4}
+      x1={-0.45}
+      y1={0}
+      x2={-0.1}
+      y2={-0.35}
       strokeWidth="0.18mm"
-      color="#ff453a"
+      color="#34d399"
     />
     <pcbnoteline
-      x1={-0.4}
-      y1={0.4}
-      x2={0.4}
-      y2={-0.4}
+      x1={-0.1}
+      y1={-0.35}
+      x2={0.55}
+      y2={0.4}
       strokeWidth="0.18mm"
-      color="#ff453a"
+      color="#34d399"
     />
     <pcbnoteline
       x1={0}
@@ -107,16 +107,16 @@ const DifferentNetPourOverlapRepro = () => (
       x2={0}
       y2={-2.45}
       strokeWidth="0.12mm"
-      color="#ff453a"
+      color="#34d399"
     />
     <pcbnotetext
-      text="SHORT: GND + AISEN occupy this point"
+      text="FIXED: center belongs to AISEN only"
       pcbY={-2.85}
       fontSize="0.45mm"
-      color="#ff453a"
+      color="#34d399"
     />
     <pcbnotetext
-      text="Expected: 0.2 mm clearance between pours"
+      text="0.2 mm clearance between pours"
       pcbY={-4.65}
       fontSize="0.4mm"
       color="#34d399"
@@ -155,31 +155,41 @@ const isPointInBrepShape = (point: Point, brepShape: BRepShape) =>
     isPointInPolygon(point, innerRing.vertices),
   )
 
-const solvePour = (
-  circuitJson: AnyCircuitElement[],
-  netName: string,
-  outline?: Point[],
-) => {
-  const sourceNet = circuitJson.find(
-    (element): element is SourceNet =>
-      element.type === "source_net" && element.name === netName,
-  )
+const solvePours = (circuitJson: AnyCircuitElement[]) => {
+  const sourceNets = ["GND", "AISEN"].map((netName) => {
+    const sourceNet = circuitJson.find(
+      (element): element is SourceNet =>
+        element.type === "source_net" && element.name === netName,
+    )
 
-  if (!sourceNet) throw new Error(`Source net "${netName}" not found`)
-
-  const inputProblem = convertCircuitJsonToInputProblem(circuitJson, {
-    layer: "bottom",
-    source_net_id: sourceNet.source_net_id,
-    pad_margin: 0.2,
-    trace_margin: 0.2,
-    board_edge_margin: 0.2,
-    outline,
+    if (!sourceNet) throw new Error(`Source net "${netName}" not found`)
+    return sourceNet
   })
 
-  return new CopperPourPipelineSolver(inputProblem).getOutput().brep_shapes
+  const inputProblem = convertCircuitJsonToInputProblem(circuitJson, [
+    {
+      layer: "bottom",
+      source_net_id: sourceNets[0]!.source_net_id,
+      pad_margin: 0.2,
+      trace_margin: 0.2,
+      pour_margin: 0.2,
+      board_edge_margin: 0.2,
+    },
+    {
+      layer: "bottom",
+      source_net_id: sourceNets[1]!.source_net_id,
+      pad_margin: 0.2,
+      trace_margin: 0.2,
+      pour_margin: 0.2,
+      board_edge_margin: 0.2,
+      outline: aisenPourOutline,
+    },
+  ])
+
+  return new CopperPourPipelineSolver(inputProblem).getOutput()
 }
 
-test.failing("different-net copper pours on the same layer should not overlap", async () => {
+test("different-net copper pours on the same layer should not overlap", async () => {
   const circuit = new Circuit()
   circuit.add(<DifferentNetPourOverlapRepro />)
   await circuit.renderUntilSettled()
@@ -190,12 +200,13 @@ test.failing("different-net copper pours on the same layer should not overlap", 
       (element) => element.type !== "pcb_copper_pour",
     ) as AnyCircuitElement[]
 
-  const brepShapes = [
-    ...solvePour(circuitJson, "GND"),
-    ...solvePour(circuitJson, "AISEN", aisenPourOutline),
-  ]
+  const { brep_shapes: brepShapes, brep_shapes_by_region } =
+    solvePours(circuitJson)
   const poursContainingBoardCenter = brepShapes.filter((brepShape) =>
     isPointInBrepShape({ x: 0, y: 0 }, brepShape),
+  )
+  const poursContainingClearanceGap = brepShapes.filter((brepShape) =>
+    isPointInBrepShape({ x: 1.9, y: 0 }, brepShape),
   )
 
   const svg = runSolverAndRenderToSvg(circuitJson, [
@@ -204,6 +215,7 @@ test.failing("different-net copper pours on the same layer should not overlap", 
       net_name: "GND",
       pad_margin: 0.2,
       trace_margin: 0.2,
+      pour_margin: 0.2,
       board_edge_margin: 0.2,
     },
     {
@@ -211,6 +223,7 @@ test.failing("different-net copper pours on the same layer should not overlap", 
       net_name: "AISEN",
       pad_margin: 0.2,
       trace_margin: 0.2,
+      pour_margin: 0.2,
       board_edge_margin: 0.2,
       outline: aisenPourOutline,
     },
@@ -221,5 +234,12 @@ test.failing("different-net copper pours on the same layer should not overlap", 
     "repro06-different-net-pour-overlap",
   )
   expect(brepShapes).toHaveLength(2)
-  expect(poursContainingBoardCenter.length).toBeLessThanOrEqual(1)
+  expect(brep_shapes_by_region).toHaveLength(2)
+  expect(brep_shapes_by_region[0]).toHaveLength(1)
+  expect(brep_shapes_by_region[1]).toHaveLength(1)
+  expect(poursContainingBoardCenter).toHaveLength(1)
+  expect(
+    isPointInBrepShape({ x: 0, y: 0 }, brep_shapes_by_region[1]![0]!),
+  ).toBe(true)
+  expect(poursContainingClearanceGap).toHaveLength(0)
 })

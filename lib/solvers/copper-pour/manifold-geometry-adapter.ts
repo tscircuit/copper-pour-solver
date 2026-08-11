@@ -94,6 +94,34 @@ export const offsetPolygon = (
   return fromScaledManifoldPolygons(offset.toPolygons())
 }
 
+export const offsetCrossSection = (
+  section: CrossSection,
+  margin: number,
+  joinType: "Square" | "Round" | "Miter" = "Miter",
+): CrossSection => {
+  if (section.isEmpty() || margin <= 0) return section
+
+  const scaledMargin = margin * MANIFOLD_GEOMETRY_SCALE
+  const polygons = section.toPolygons()
+  return runManifoldOperation("offsetCrossSection", polygons, () =>
+    section.offset(scaledMargin, joinType, 2, 32),
+  )
+}
+
+export const subtractCrossSectionBlockers = (
+  pourSection: CrossSection,
+  blockerSections: CrossSection[],
+): CrossSection => {
+  const blockerSection = composeCrossSections(blockerSections)
+  if (pourSection.isEmpty() || blockerSection.isEmpty()) return pourSection
+
+  return runManifoldOperation(
+    "subtractCrossSectionBlockers",
+    [...pourSection.toPolygons(), ...blockerSection.toPolygons()],
+    () => pourSection.subtract(blockerSection),
+  )
+}
+
 export const subtractBlockersFromPour = (
   pourPolygon: PolygonRing,
   blockerPolygons: PolygonRing[],

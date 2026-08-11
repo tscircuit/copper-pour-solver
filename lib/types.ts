@@ -9,6 +9,8 @@ export interface InputPourRegion {
   connectivityKey: string
   padMargin: number
   traceMargin: number
+  /** Clearance from higher-priority, different-net pour regions. */
+  pourMargin?: number
   board_edge_margin?: number
   cutout_margin?: number
 }
@@ -70,9 +72,12 @@ export type InputPad =
   | InputPolygonPad
 
 export interface InputProblem {
+  /** Later regions have higher priority when different-net regions overlap. */
   regionsForPour: InputPourRegion[]
   pads: InputPad[]
 }
 export interface PipelineOutput {
   brep_shapes: BRepShape[]
+  /** B-Rep shapes aligned with the order of `regionsForPour`. */
+  brep_shapes_by_region: BRepShape[][]
 }

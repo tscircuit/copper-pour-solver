@@ -13,6 +13,7 @@ export interface ConvertCircuitJsonToInputProblemOptions {
   pour_connectivity_key?: string
   pad_margin: number
   trace_margin: number
+  pour_margin?: number
   board_edge_margin?: number
   cutout_margin?: number
   outline?: Point[]
