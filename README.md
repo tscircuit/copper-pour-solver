@@ -44,6 +44,11 @@ plated holes, mechanical holes, vias, traces, and cutouts for the selected layer
 Pads and traces connected to the selected source net are kept connected to the
 pour; unrelated geometry is subtracted using the configured margins.
 
+Pass an options array to solve all pours from one subcircuit together. This is
+required for pour-to-pour clearance because the solver must see every region in
+the same input problem. Array order is the priority order: later pours take
+priority over earlier pours.
+
 ## Selecting The Pour Net
 
 Prefer selecting by source net name or id:
@@ -108,6 +113,7 @@ const input: InputProblem = {
       connectivityKey: "net:GND",
       padMargin: 0.4,
       traceMargin: 0.2,
+      pourMargin: 0.2,
       board_edge_margin: 0.1,
     },
   ],
@@ -130,6 +136,10 @@ const output = new CopperPourPipelineSolver(input).getOutput()
 Supported input pad shapes are `rect`, `circle`, `pill`, `trace`, and `polygon`.
 Use the same `connectivityKey` as the pour for pads/traces that should connect to
 the copper island; use a different key for blockers that should be cleared.
+When multiple regions share a layer, later entries have higher priority. A
+lower-priority region is cleared from higher-priority, different-net copper by
+the larger of the two regions' `pourMargin` values. Same-net regions and regions
+on different layers do not block each other.
 
 ## Output
 
@@ -138,8 +148,13 @@ the copper island; use a different key for blockers that should be cleared.
 ```ts
 interface PipelineOutput {
   brep_shapes: BRepShape[]
+  brep_shapes_by_region: BRepShape[][]
 }
 ```
+
+`brep_shapes` is the flattened result in input-region order.
+`brep_shapes_by_region` preserves the association between each input region and
+its generated shapes.
 
 Each B-Rep shape is compatible with Circuit JSON copper pour data:
 

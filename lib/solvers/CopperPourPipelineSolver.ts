@@ -5,7 +5,9 @@ import { generateBRep } from "./copper-pour/generate-brep"
 import { getBoardPolygon } from "./copper-pour/get-board-polygon"
 import {
   crossSectionToCopperPourIslands,
+  offsetCrossSection,
   removeTinyIslands,
+  subtractCrossSectionBlockers,
   subtractBlockersFromPour,
 } from "./copper-pour/manifold-geometry-adapter"
 import { isManifoldGeometryInitialized } from "./copper-pour/manifold-runtime"
@@ -28,9 +30,23 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
       )
     }
 
-    const brep_shapes: BRepShape[] = []
+    const brep_shapes_by_region: BRepShape[][] = this.input.regionsForPour.map(
+      () => [],
+    )
+    const solvedRegions: Array<{
+      layer: string
+      connectivityKey: string
+      pourMargin: number
+      section: ReturnType<typeof subtractBlockersFromPour>
+    }> = []
 
-    for (const region of this.input.regionsForPour) {
+    // Later regions have higher priority, matching declaration/draw order.
+    for (
+      let regionIndex = this.input.regionsForPour.length - 1;
+      regionIndex >= 0;
+      regionIndex--
+    ) {
+      const region = this.input.regionsForPour[regionIndex]!
       const boardPolygon = getBoardPolygon(region)
 
       const padsForLayer = this.input.pads.filter(
@@ -49,17 +65,45 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
         region.outline,
       )
 
+      const pourMargin =
+        region.pourMargin ?? Math.max(region.padMargin, region.traceMargin)
+      const higherPriorityPourBlockers = solvedRegions
+        .filter(
+          (solvedRegion) =>
+            solvedRegion.layer === region.layer &&
+            solvedRegion.connectivityKey !== region.connectivityKey,
+        )
+        .map((solvedRegion) =>
+          offsetCrossSection(
+            solvedRegion.section,
+            Math.max(pourMargin, solvedRegion.pourMargin),
+          ),
+        )
+
+      const pourWithoutComponentObstacles = subtractBlockersFromPour(
+        boardPolygon,
+        polygonsToSubtract,
+      )
       const finalPour = removeTinyIslands(
-        subtractBlockersFromPour(boardPolygon, polygonsToSubtract),
+        subtractCrossSectionBlockers(
+          pourWithoutComponentObstacles,
+          higherPriorityPourBlockers,
+        ),
       )
       const pourIslands = crossSectionToCopperPourIslands(finalPour)
 
-      const new_breps = generateBRep(pourIslands)
-      brep_shapes.push(...new_breps)
+      brep_shapes_by_region[regionIndex] = generateBRep(pourIslands)
+      solvedRegions.push({
+        layer: region.layer,
+        connectivityKey: region.connectivityKey,
+        pourMargin,
+        section: finalPour,
+      })
     }
 
     return {
-      brep_shapes,
+      brep_shapes: brep_shapes_by_region.flat(),
+      brep_shapes_by_region,
     }
   }
 }

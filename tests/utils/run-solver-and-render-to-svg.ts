@@ -16,6 +16,7 @@ interface PourOptions {
   net_name: string
   pad_margin: number
   trace_margin: number
+  pour_margin?: number
   board_edge_margin?: number
   cutout_margin?: number
   outline?: Point[]
@@ -29,9 +30,7 @@ export const runSolverAndRenderToSvg = (
     ? pour_options
     : [pour_options]
 
-  const allCopperPours: PcbCopperPourBRep[] = []
-
-  for (const options of pourOptionsArray) {
+  const resolvedPourOptions = pourOptionsArray.map((options) => {
     const source_net = circuitJson.find(
       (elm): elm is SourceNet =>
         elm.type === "source_net" && elm.name === options.net_name,
@@ -47,15 +46,29 @@ export const runSolverAndRenderToSvg = (
       )
     }
 
-    const inputProblem = convertCircuitJsonToInputProblem(circuitJson, {
-      ...options,
-      source_net_id: source_net.source_net_id,
-    })
+    return {
+      source_net,
+      options: {
+        ...options,
+        source_net_id: source_net.source_net_id,
+      },
+    }
+  })
 
-    const solver = new CopperPourPipelineSolver(inputProblem)
-    const output = solver.getOutput()
+  const inputProblem = convertCircuitJsonToInputProblem(
+    circuitJson,
+    resolvedPourOptions.map(({ options }) => options),
+  )
+  const output = new CopperPourPipelineSolver(inputProblem).getOutput()
+  const allCopperPours: PcbCopperPourBRep[] = []
 
-    const pcb_copper_pours: PcbCopperPourBRep[] = output.brep_shapes.map(
+  for (const [
+    regionIndex,
+    { source_net, options },
+  ] of resolvedPourOptions.entries()) {
+    const pcb_copper_pours: PcbCopperPourBRep[] = output.brep_shapes_by_region[
+      regionIndex
+    ]!.map(
       (brep_shape, i) =>
         ({
           type: "pcb_copper_pour",

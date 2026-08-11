@@ -25,8 +25,43 @@ import { resolvePourConnectivityKey } from "./resolvePourConnectivityKey"
 
 export const convertCircuitJsonToInputProblem = (
   circuitJson: AnyCircuitElement[],
-  options: ConvertCircuitJsonToInputProblemOptions,
+  optionsOrOptions:
+    | ConvertCircuitJsonToInputProblemOptions
+    | ConvertCircuitJsonToInputProblemOptions[],
 ): InputProblem => {
+  if (Array.isArray(optionsOrOptions)) {
+    if (optionsOrOptions.length === 0) {
+      return { pads: [], regionsForPour: [] }
+    }
+
+    const subcircuitId = optionsOrOptions[0]!.subcircuit_id
+    if (
+      optionsOrOptions.some((options) => options.subcircuit_id !== subcircuitId)
+    ) {
+      throw new Error(
+        "All copper pours in one input problem must use the same subcircuit_id",
+      )
+    }
+
+    const inputProblems = optionsOrOptions.map((options) =>
+      convertCircuitJsonToInputProblem(circuitJson, options),
+    )
+    const padsByLayerAndId = new Map<string, InputPad>()
+    for (const inputProblem of inputProblems) {
+      for (const pad of inputProblem.pads) {
+        padsByLayerAndId.set(`${pad.layer}:${pad.padId}`, pad)
+      }
+    }
+
+    return {
+      pads: [...padsByLayerAndId.values()],
+      regionsForPour: inputProblems.flatMap(
+        (inputProblem) => inputProblem.regionsForPour,
+      ),
+    }
+  }
+
+  const options = optionsOrOptions
   const pcb_board = circuitJson.find((e) => e.type === "pcb_board") as
     | PcbBoard
     | undefined
@@ -309,6 +344,9 @@ export const convertCircuitJsonToInputProblem = (
       connectivityKey: pourConnectivityKey,
       padMargin: options.pad_margin,
       traceMargin: options.trace_margin,
+      pourMargin:
+        options.pour_margin ??
+        Math.max(options.pad_margin, options.trace_margin),
       board_edge_margin: options.board_edge_margin ?? 0,
       cutout_margin: options.cutout_margin,
     },
