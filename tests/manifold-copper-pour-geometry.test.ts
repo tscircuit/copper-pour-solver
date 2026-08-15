@@ -160,10 +160,9 @@ test("same-net plated holes use the configured thermal relief spokes", () => {
       radius: 0.6,
     },
   ])
-  problem.regionsForPour[0]!.thermalRelief = {
-    spokeWidth: 0.25,
-    spokeCount: 3,
-  }
+  problem.regionsForPour[0]!.use_thermal_reliefs = true
+  problem.regionsForPour[0]!.thermal_relief_spoke_width = 0.25
+  problem.regionsForPour[0]!.thermal_relief_spoke_count = 3
 
   const shapes = new CopperPourPipelineSolver(problem).getOutput().brep_shapes
 
@@ -186,21 +185,17 @@ test("thermal relief options validate spoke dimensions", () => {
       radius: 0.6,
     },
   ])
-  problem.regionsForPour[0]!.thermalRelief = {
-    spokeWidth: 0,
-    spokeCount: 2.5,
-  }
+  problem.regionsForPour[0]!.use_thermal_reliefs = true
+  problem.regionsForPour[0]!.thermal_relief_spoke_width = 0
+  problem.regionsForPour[0]!.thermal_relief_spoke_count = 2.5
 
   expect(() => new CopperPourPipelineSolver(problem).getOutput()).toThrow(
-    /spokeWidth/,
+    /thermal_relief_spoke_width/,
   )
 
-  problem.regionsForPour[0]!.thermalRelief = {
-    spokeWidth: 0.25,
-    spokeCount: 2.5,
-  }
+  problem.regionsForPour[0]!.thermal_relief_spoke_width = 0.25
   expect(() => new CopperPourPipelineSolver(problem).getOutput()).toThrow(
-    /spokeCount/,
+    /thermal_relief_spoke_count/,
   )
 })
 

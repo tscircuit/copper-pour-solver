@@ -5,7 +5,6 @@ import type {
   InputPillPad,
   InputRectPad,
   InputRotatedRectPad,
-  ThermalReliefOptions,
 } from "lib/types"
 import {
   crossSectionFromPolygon,
@@ -91,17 +90,23 @@ const isSupportedThermalReliefPad = (
 export const generateThermalReliefClearances = (
   pad: InputPad,
   airGap: number,
-  thermalRelief: ThermalReliefOptions,
+  thermal_relief_spoke_width: number | undefined,
+  thermal_relief_spoke_count = 4,
 ): PolygonRing[] => {
   if (!isSupportedThermalReliefPad(pad) || airGap <= 0) return []
 
-  const { spokeWidth } = thermalRelief
-  const spokeCount = thermalRelief.spokeCount ?? 4
-  if (!Number.isFinite(spokeWidth) || spokeWidth <= 0) {
-    throw new Error("thermalRelief.spokeWidth must be greater than 0")
+  if (
+    typeof thermal_relief_spoke_width !== "number" ||
+    !Number.isFinite(thermal_relief_spoke_width) ||
+    thermal_relief_spoke_width <= 0
+  ) {
+    throw new Error("thermal_relief_spoke_width must be greater than 0")
   }
-  if (!Number.isInteger(spokeCount) || spokeCount < 1) {
-    throw new Error("thermalRelief.spokeCount must be a positive integer")
+  if (
+    !Number.isInteger(thermal_relief_spoke_count) ||
+    thermal_relief_spoke_count < 1
+  ) {
+    throw new Error("thermal_relief_spoke_count must be a positive integer")
   }
 
   const padPolygon = padToPolygon(pad, 0)
@@ -112,12 +117,12 @@ export const generateThermalReliefClearances = (
       ...clearancePolygon.map((point) =>
         Math.hypot(point.x - center.x, point.y - center.y),
       ),
-    ) + spokeWidth
+    ) + thermal_relief_spoke_width
   const baseRotation = (getPadRotation(pad) * Math.PI) / 180
   const spokes: PolygonRing[] = []
 
-  for (let i = 0; i < spokeCount; i++) {
-    const angle = baseRotation + (i / spokeCount) * Math.PI * 2
+  for (let i = 0; i < thermal_relief_spoke_count; i++) {
+    const angle = baseRotation + (i / thermal_relief_spoke_count) * Math.PI * 2
     spokes.push(
       segmentToPolygon(
         center,
@@ -125,7 +130,7 @@ export const generateThermalReliefClearances = (
           x: center.x + Math.cos(angle) * spokeLength,
           y: center.y + Math.sin(angle) * spokeLength,
         },
-        spokeWidth,
+        thermal_relief_spoke_width,
       ),
     )
   }

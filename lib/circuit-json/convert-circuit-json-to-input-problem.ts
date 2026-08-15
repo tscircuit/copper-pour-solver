@@ -368,7 +368,9 @@ export const convertCircuitJsonToInputProblem = (
         Math.max(options.pad_margin, options.trace_margin),
       board_edge_margin: options.board_edge_margin ?? 0,
       cutout_margin: options.cutout_margin,
-      thermalRelief: options.thermalRelief,
+      use_thermal_reliefs: options.use_thermal_reliefs,
+      thermal_relief_spoke_width: options.thermal_relief_spoke_width,
+      thermal_relief_spoke_count: options.thermal_relief_spoke_count,
     },
   ]
 

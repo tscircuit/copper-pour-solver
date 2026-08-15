@@ -97,7 +97,8 @@ const cases = [
       outer_diameter: 2.4,
       hole_diameter: 1.2,
     },
-    thermalRelief: { spokeWidth: 0.3, spokeCount: 4 },
+    thermal_relief_spoke_width: 0.3,
+    thermal_relief_spoke_count: 4,
   },
   {
     name: "pill with 3 spokes",
@@ -110,7 +111,8 @@ const cases = [
       hole_height: 2.2,
       ccw_rotation: 30,
     },
-    thermalRelief: { spokeWidth: 0.25, spokeCount: 3 },
+    thermal_relief_spoke_width: 0.25,
+    thermal_relief_spoke_count: 3,
   },
   {
     name: "rotated rectangular pad with 6 spokes",
@@ -126,7 +128,8 @@ const cases = [
       hole_offset_x: 0,
       hole_offset_y: 0,
     },
-    thermalRelief: { spokeWidth: 0.18, spokeCount: 6 },
+    thermal_relief_spoke_width: 0.18,
+    thermal_relief_spoke_count: 6,
   },
 ] as const
 
@@ -140,7 +143,9 @@ for (const thermalCase of cases) {
         pad_margin: 0.35,
         trace_margin: 0.2,
         board_edge_margin: 0.2,
-        thermalRelief: thermalCase.thermalRelief,
+        use_thermal_reliefs: true,
+        thermal_relief_spoke_width: thermalCase.thermal_relief_spoke_width,
+        thermal_relief_spoke_count: thermalCase.thermal_relief_spoke_count,
       },
     )
 

@@ -39,7 +39,9 @@ test("repro04 rp2040 motor controller thermal reliefs", async () => {
     pad_margin: 0.3,
     trace_margin: 0.2,
     board_edge_margin: 0.3,
-    thermalRelief: { spokeWidth: 0.25, spokeCount: 4 },
+    use_thermal_reliefs: true,
+    thermal_relief_spoke_width: 0.25,
+    thermal_relief_spoke_count: 4,
   })
 
   await expect(svg).toMatchSvgSnapshot(
