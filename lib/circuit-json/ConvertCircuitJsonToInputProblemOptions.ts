@@ -16,5 +16,11 @@ export interface ConvertCircuitJsonToInputProblemOptions {
   pour_margin?: number
   board_edge_margin?: number
   cutout_margin?: number
+  /** Enables thermal reliefs for same-net plated holes. */
+  use_thermal_reliefs?: boolean
+  /** Width of each thermal relief spoke. Required when enabled. */
+  thermal_relief_spoke_width?: number
+  /** Number of evenly spaced thermal relief spokes. Defaults to 4. */
+  thermal_relief_spoke_count?: number
   outline?: Point[]
 }

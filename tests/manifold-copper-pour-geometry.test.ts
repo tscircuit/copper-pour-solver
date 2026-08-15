@@ -147,6 +147,58 @@ test("pads and vias inside pour become holes", () => {
   assertValidRings(shapes)
 })
 
+test("same-net plated holes use the configured thermal relief spokes", () => {
+  const problem = baseProblem([
+    {
+      padId: "plated-hole-1",
+      shape: "circle",
+      layer: "top",
+      connectivityKey: "net:GND",
+      isPlatedHole: true,
+      x: 5,
+      y: 5,
+      radius: 0.6,
+    },
+  ])
+  problem.regionsForPour[0]!.use_thermal_reliefs = true
+  problem.regionsForPour[0]!.thermal_relief_spoke_width = 0.25
+  problem.regionsForPour[0]!.thermal_relief_spoke_count = 3
+
+  const shapes = new CopperPourPipelineSolver(problem).getOutput().brep_shapes
+
+  expect(shapes).toHaveLength(1)
+  expect(shapes[0]!.inner_rings).toHaveLength(3)
+  expect(totalArea(shapes)).toBeLessThan(100)
+  assertValidRings(shapes)
+})
+
+test("thermal relief options validate spoke dimensions", () => {
+  const problem = baseProblem([
+    {
+      padId: "plated-hole-1",
+      shape: "circle",
+      layer: "top",
+      connectivityKey: "net:GND",
+      isPlatedHole: true,
+      x: 5,
+      y: 5,
+      radius: 0.6,
+    },
+  ])
+  problem.regionsForPour[0]!.use_thermal_reliefs = true
+  problem.regionsForPour[0]!.thermal_relief_spoke_width = 0
+  problem.regionsForPour[0]!.thermal_relief_spoke_count = 2.5
+
+  expect(() => new CopperPourPipelineSolver(problem).getOutput()).toThrow(
+    /thermal_relief_spoke_width/,
+  )
+
+  problem.regionsForPour[0]!.thermal_relief_spoke_width = 0.25
+  expect(() => new CopperPourPipelineSolver(problem).getOutput()).toThrow(
+    /thermal_relief_spoke_count/,
+  )
+})
+
 test("blocker covering pour returns empty result", () => {
   const shapes = solve([
     {

@@ -19,6 +19,9 @@ interface PourOptions {
   pour_margin?: number
   board_edge_margin?: number
   cutout_margin?: number
+  use_thermal_reliefs?: boolean
+  thermal_relief_spoke_width?: number
+  thermal_relief_spoke_count?: number
   outline?: Point[]
 }
 

@@ -33,6 +33,9 @@ const inputProblem = convertCircuitJsonToInputProblem(circuitJson, {
   trace_margin: 0.2,
   board_edge_margin: 0.1,
   cutout_margin: 0.2,
+  use_thermal_reliefs: true,
+  thermal_relief_spoke_width: 0.3,
+  thermal_relief_spoke_count: 4,
 })
 
 const solver = new CopperPourPipelineSolver(inputProblem)
@@ -43,6 +46,10 @@ const { brep_shapes } = solver.getOutput()
 plated holes, mechanical holes, vias, traces, and cutouts for the selected layer.
 Pads and traces connected to the selected source net are kept connected to the
 pour; unrelated geometry is subtracted using the configured margins.
+When `use_thermal_reliefs` is true, plated holes on the pour net are isolated by
+the `pad_margin` air gap and reconnected by evenly spaced spokes.
+`thermal_relief_spoke_width` is required and `thermal_relief_spoke_count`
+defaults to 4. Other same-net pads and vias remain solid-connected.
 
 Pass an options array to solve all pours from one subcircuit together. This is
 required for pour-to-pour clearance because the solver must see every region in
@@ -115,6 +122,9 @@ const input: InputProblem = {
       traceMargin: 0.2,
       pourMargin: 0.2,
       board_edge_margin: 0.1,
+      use_thermal_reliefs: true,
+      thermal_relief_spoke_width: 0.3,
+      thermal_relief_spoke_count: 4,
     },
   ],
   pads: [
@@ -126,6 +136,7 @@ const input: InputProblem = {
       x: 0,
       y: 0,
       radius: 0.5,
+      isPlatedHole: true,
     },
   ],
 }
