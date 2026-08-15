@@ -162,6 +162,7 @@ export const convertCircuitJsonToInputProblem = (
           padId: platedHole.pcb_plated_hole_id,
           layer: options.layer,
           connectivityKey,
+          isPlatedHole: true,
           x: platedHole.x,
           y: platedHole.y,
           radius: platedHole.outer_diameter / 2,
@@ -172,6 +173,7 @@ export const convertCircuitJsonToInputProblem = (
           padId: platedHole.pcb_plated_hole_id,
           layer: options.layer,
           connectivityKey,
+          isPlatedHole: true,
           x: platedHole.x,
           y: platedHole.y,
           width: platedHole.outer_width,
@@ -185,18 +187,35 @@ export const convertCircuitJsonToInputProblem = (
         if (typeof rectWidth !== "number" || typeof rectHeight !== "number") {
           continue
         }
-        pads.push({
-          shape: "rect",
-          padId: platedHole.pcb_plated_hole_id,
-          layer: options.layer,
-          connectivityKey,
-          bounds: {
-            minX: platedHole.x - rectWidth / 2,
-            minY: platedHole.y - rectHeight / 2,
-            maxX: platedHole.x + rectWidth / 2,
-            maxY: platedHole.y + rectHeight / 2,
-          },
-        } as InputRectPad)
+        const rectRotation = platedHole.rect_ccw_rotation ?? 0
+        if (rectRotation === 0) {
+          pads.push({
+            shape: "rect",
+            padId: platedHole.pcb_plated_hole_id,
+            layer: options.layer,
+            connectivityKey,
+            isPlatedHole: true,
+            bounds: {
+              minX: platedHole.x - rectWidth / 2,
+              minY: platedHole.y - rectHeight / 2,
+              maxX: platedHole.x + rectWidth / 2,
+              maxY: platedHole.y + rectHeight / 2,
+            },
+          } as InputRectPad)
+        } else {
+          pads.push({
+            shape: "rotated_rect",
+            padId: platedHole.pcb_plated_hole_id,
+            layer: options.layer,
+            connectivityKey,
+            isPlatedHole: true,
+            x: platedHole.x,
+            y: platedHole.y,
+            width: rectWidth,
+            height: rectHeight,
+            ccwRotation: rectRotation,
+          } as InputRotatedRectPad)
+        }
       }
     } else if (elm.type === "pcb_hole") {
       const hole = elm as PcbHole
@@ -349,6 +368,7 @@ export const convertCircuitJsonToInputProblem = (
         Math.max(options.pad_margin, options.trace_margin),
       board_edge_margin: options.board_edge_margin ?? 0,
       cutout_margin: options.cutout_margin,
+      thermalRelief: options.thermalRelief,
     },
   ]
 

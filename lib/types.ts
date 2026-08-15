@@ -1,6 +1,13 @@
 import type { Bounds, Point } from "@tscircuit/math-utils"
 import type { BRepShape } from "circuit-json"
 
+export interface ThermalReliefOptions {
+  /** Width of each copper spoke. */
+  spokeWidth: number
+  /** Number of evenly spaced spokes. Defaults to 4. */
+  spokeCount?: number
+}
+
 export interface InputPourRegion {
   shape: "rect"
   layer: string
@@ -13,12 +20,19 @@ export interface InputPourRegion {
   pourMargin?: number
   board_edge_margin?: number
   cutout_margin?: number
+  /**
+   * Replaces the solid connection to same-net plated holes with thermal
+   * relief spokes. `padMargin` is used as the thermal air gap.
+   */
+  thermalRelief?: ThermalReliefOptions
 }
 
 export interface BaseInputPad {
   padId: string
   connectivityKey: string
   layer: string
+  /** Enables plated-hole-specific behavior such as thermal reliefs. */
+  isPlatedHole?: boolean
 }
 
 export interface InputRectPad extends BaseInputPad {

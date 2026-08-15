@@ -10,6 +10,7 @@ import type {
 } from "circuit-json"
 import { convertCircuitJsonToPcbSvg } from "circuit-to-svg"
 import type { Point } from "@tscircuit/math-utils"
+import type { ThermalReliefOptions } from "lib/types"
 
 interface PourOptions {
   layer: LayerRef
@@ -19,6 +20,7 @@ interface PourOptions {
   pour_margin?: number
   board_edge_margin?: number
   cutout_margin?: number
+  thermalRelief?: ThermalReliefOptions
   outline?: Point[]
 }
 

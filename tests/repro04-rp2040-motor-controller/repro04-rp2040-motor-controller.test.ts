@@ -31,3 +31,19 @@ test("repro04 rp2040 motor controller bottom layer", async () => {
     "repro04-rp2040-motor-controller-bottom",
   )
 })
+
+test("repro04 rp2040 motor controller thermal reliefs", async () => {
+  const svg = runSolverAndRenderToSvg(motorControllerCircuitJson, {
+    layer: "top",
+    net_name: "GND",
+    pad_margin: 0.3,
+    trace_margin: 0.2,
+    board_edge_margin: 0.3,
+    thermalRelief: { spokeWidth: 0.25, spokeCount: 4 },
+  })
+
+  await expect(svg).toMatchSvgSnapshot(
+    import.meta.path,
+    "repro04-rp2040-motor-controller-thermal-reliefs",
+  )
+})

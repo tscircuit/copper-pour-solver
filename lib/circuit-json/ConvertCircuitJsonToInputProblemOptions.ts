@@ -1,4 +1,5 @@
 import type { LayerRef, Point } from "circuit-json"
+import type { ThermalReliefOptions } from "lib/types"
 
 export interface ConvertCircuitJsonToInputProblemOptions {
   layer: LayerRef
@@ -16,5 +17,10 @@ export interface ConvertCircuitJsonToInputProblemOptions {
   pour_margin?: number
   board_edge_margin?: number
   cutout_margin?: number
+  /**
+   * Adds spokes around same-net plated holes. `pad_margin` is used as the
+   * thermal air gap.
+   */
+  thermalRelief?: ThermalReliefOptions
   outline?: Point[]
 }

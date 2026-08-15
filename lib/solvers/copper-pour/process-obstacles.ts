@@ -7,7 +7,9 @@ import type {
   InputRectPad,
   InputRotatedRectPad,
   InputTracePad,
+  ThermalReliefOptions,
 } from "lib/types"
+import { generateThermalReliefClearances } from "./generate-thermal-relief-clearances"
 import { offsetPolygon } from "./manifold-geometry-adapter"
 import {
   boxToPolygon,
@@ -41,12 +43,19 @@ export const processObstaclesForPour = (
     traceMargin: number
     board_edge_margin?: number
     cutoutMargin?: number
+    thermalRelief?: ThermalReliefOptions
   },
   boardOutline?: Point[],
 ): ProcessedObstacles => {
   const polygonsToSubtract: PolygonRing[] = []
 
-  const { padMargin, traceMargin, board_edge_margin, cutoutMargin } = margins
+  const {
+    padMargin,
+    traceMargin,
+    board_edge_margin,
+    cutoutMargin,
+    thermalRelief,
+  } = margins
 
   if (
     boardOutline &&
@@ -103,6 +112,11 @@ export const processObstaclesForPour = (
     const isOnNet = pad.connectivityKey === pourConnectivityKey
 
     if (isOnNet) {
+      if (pad.isPlatedHole && thermalRelief) {
+        polygonsToSubtract.push(
+          ...generateThermalReliefClearances(pad, padMargin, thermalRelief),
+        )
+      }
       continue
     }
 
