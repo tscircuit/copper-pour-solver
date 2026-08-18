@@ -14,6 +14,8 @@ import { isManifoldGeometryInitialized } from "./copper-pour/manifold-runtime"
 import { processObstaclesForPour } from "./copper-pour/process-obstacles"
 
 export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
+  static solverName = "CopperPourPipelineSolver"
+
   pipelineDef = []
   constructor(public input: InputProblem) {
     super(input)
