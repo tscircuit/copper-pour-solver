@@ -16,7 +16,7 @@ export interface ConvertCircuitJsonToInputProblemOptions {
   pour_margin?: number
   board_edge_margin?: number
   cutout_margin?: number
-  /** Enables thermal reliefs for same-net plated holes. */
+  /** Enables thermal reliefs for same-net plated holes and SMT pads. */
   use_thermal_reliefs?: boolean
   /** Width of each thermal relief spoke. Required when enabled. */
   thermal_relief_spoke_width?: number

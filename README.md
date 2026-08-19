@@ -46,10 +46,10 @@ const { brep_shapes } = solver.getOutput()
 plated holes, mechanical holes, vias, traces, and cutouts for the selected layer.
 Pads and traces connected to the selected source net are kept connected to the
 pour; unrelated geometry is subtracted using the configured margins.
-When `use_thermal_reliefs` is true, plated holes on the pour net are isolated by
-the `pad_margin` air gap and reconnected by evenly spaced spokes.
+When `use_thermal_reliefs` is true, plated holes and SMT pads on the pour net are
+isolated by the `pad_margin` air gap and reconnected by evenly spaced spokes.
 `thermal_relief_spoke_width` is required and `thermal_relief_spoke_count`
-defaults to 4. Other same-net pads and vias remain solid-connected.
+defaults to 4. Same-net vias and traces remain solid-connected.
 
 Pass an options array to solve all pours from one subcircuit together. This is
 required for pour-to-pour clearance because the solver must see every region in

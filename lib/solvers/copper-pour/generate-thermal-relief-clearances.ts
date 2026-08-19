@@ -3,13 +3,14 @@ import type {
   InputCircularPad,
   InputPad,
   InputPillPad,
+  InputPolygonPad,
   InputRectPad,
   InputRotatedRectPad,
 } from "lib/types"
 import {
-  crossSectionFromPolygon,
   crossSectionFromPolygons,
   crossSectionToCopperPourIslands,
+  offsetPolygon,
   subtractCrossSectionBlockers,
 } from "./manifold-geometry-adapter"
 import {
@@ -19,11 +20,12 @@ import {
   rotatedBoxToPolygon,
   segmentToPolygon,
 } from "./polygon-primitives"
-import type { PolygonRing } from "./polygon-ring"
+import { normalizeRing, type PolygonRing } from "./polygon-ring"
 
 type SupportedThermalReliefPad =
   | InputCircularPad
   | InputPillPad
+  | InputPolygonPad
   | InputRectPad
   | InputRotatedRectPad
 
@@ -32,6 +34,26 @@ const getPadCenter = (pad: SupportedThermalReliefPad): Point => {
     return {
       x: (pad.bounds.minX + pad.bounds.maxX) / 2,
       y: (pad.bounds.minY + pad.bounds.maxY) / 2,
+    }
+  }
+  if (pad.shape === "polygon") {
+    const bounds = pad.points.reduce(
+      (acc, point) => ({
+        minX: Math.min(acc.minX, point.x),
+        minY: Math.min(acc.minY, point.y),
+        maxX: Math.max(acc.maxX, point.x),
+        maxY: Math.max(acc.maxY, point.y),
+      }),
+      {
+        minX: Number.POSITIVE_INFINITY,
+        minY: Number.POSITIVE_INFINITY,
+        maxX: Number.NEGATIVE_INFINITY,
+        maxY: Number.NEGATIVE_INFINITY,
+      },
+    )
+    return {
+      x: (bounds.minX + bounds.maxX) / 2,
+      y: (bounds.minY + bounds.maxY) / 2,
     }
   }
   return { x: pad.x, y: pad.y }
@@ -44,39 +66,53 @@ const getPadRotation = (pad: SupportedThermalReliefPad): number => {
   return 0
 }
 
-const padToPolygon = (
+const padToPolygons = (
   pad: SupportedThermalReliefPad,
   margin: number,
-): PolygonRing => {
+): PolygonRing[] => {
   if (pad.shape === "circle") {
-    return circleToPolygon({ x: pad.x, y: pad.y }, pad.radius + margin)
+    return [circleToPolygon({ x: pad.x, y: pad.y }, pad.radius + margin)]
   }
 
   if (pad.shape === "pill") {
-    return pillToPolygon(
-      { x: pad.x, y: pad.y },
-      pad.width + margin * 2,
-      pad.height + margin * 2,
-      pad.radius + margin,
-      pad.ccwRotation,
-    )
+    return [
+      pillToPolygon(
+        { x: pad.x, y: pad.y },
+        pad.width + margin * 2,
+        pad.height + margin * 2,
+        pad.radius + margin,
+        pad.ccwRotation,
+      ),
+    ]
   }
 
   if (pad.shape === "rect") {
-    return boxToPolygon(
-      pad.bounds.minX - margin,
-      pad.bounds.minY - margin,
-      pad.bounds.maxX + margin,
-      pad.bounds.maxY + margin,
-    )
+    return [
+      boxToPolygon(
+        pad.bounds.minX - margin,
+        pad.bounds.minY - margin,
+        pad.bounds.maxX + margin,
+        pad.bounds.maxY + margin,
+      ),
+    ]
   }
 
-  return rotatedBoxToPolygon(
-    { x: pad.x, y: pad.y },
-    pad.width + margin * 2,
-    pad.height + margin * 2,
-    pad.ccwRotation,
-  )
+  if (pad.shape === "polygon") {
+    const polygon = normalizeRing(
+      pad.points,
+      "generateThermalReliefClearances.polygonPad",
+    )
+    return margin > 0 ? offsetPolygon(polygon, margin, "Round") : [polygon]
+  }
+
+  return [
+    rotatedBoxToPolygon(
+      { x: pad.x, y: pad.y },
+      pad.width + margin * 2,
+      pad.height + margin * 2,
+      pad.ccwRotation,
+    ),
+  ]
 }
 
 const isSupportedThermalReliefPad = (
@@ -84,6 +120,7 @@ const isSupportedThermalReliefPad = (
 ): pad is SupportedThermalReliefPad =>
   pad.shape === "circle" ||
   pad.shape === "pill" ||
+  pad.shape === "polygon" ||
   pad.shape === "rect" ||
   pad.shape === "rotated_rect"
 
@@ -109,14 +146,14 @@ export const generateThermalReliefClearances = (
     throw new Error("thermal_relief_spoke_count must be a positive integer")
   }
 
-  const padPolygon = padToPolygon(pad, 0)
-  const clearancePolygon = padToPolygon(pad, airGap)
+  const padPolygons = padToPolygons(pad, 0)
+  const clearancePolygons = padToPolygons(pad, airGap)
   const center = getPadCenter(pad)
   const spokeLength =
     Math.max(
-      ...clearancePolygon.map((point) =>
-        Math.hypot(point.x - center.x, point.y - center.y),
-      ),
+      ...clearancePolygons
+        .flatMap((polygon) => polygon)
+        .map((point) => Math.hypot(point.x - center.x, point.y - center.y)),
     ) + thermal_relief_spoke_width
   const baseRotation = (getPadRotation(pad) * Math.PI) / 180
   const spokes: PolygonRing[] = []
@@ -135,9 +172,9 @@ export const generateThermalReliefClearances = (
     )
   }
 
-  const clearanceSection = crossSectionFromPolygon(clearancePolygon)
+  const clearanceSection = crossSectionFromPolygons(clearancePolygons)
   const connectedCopperSection = crossSectionFromPolygons([
-    padPolygon,
+    ...padPolygons,
     ...spokes,
   ])
   const clearanceWithSpokes = subtractCrossSectionBlockers(clearanceSection, [

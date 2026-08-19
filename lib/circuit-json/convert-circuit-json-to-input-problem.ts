@@ -101,6 +101,7 @@ export const convertCircuitJsonToInputProblem = (
           padId: smtpad.pcb_smtpad_id,
           layer: smtpad.layer,
           connectivityKey,
+          isSmtPad: true,
           bounds: {
             minX: smtpad.x - smtpad.width! / 2,
             minY: smtpad.y - smtpad.height! / 2,
@@ -114,6 +115,7 @@ export const convertCircuitJsonToInputProblem = (
           padId: smtpad.pcb_smtpad_id,
           layer: smtpad.layer,
           connectivityKey,
+          isSmtPad: true,
           x: smtpad.x,
           y: smtpad.y,
           width: smtpad.width,
@@ -126,6 +128,7 @@ export const convertCircuitJsonToInputProblem = (
           padId: smtpad.pcb_smtpad_id,
           layer: smtpad.layer,
           connectivityKey,
+          isSmtPad: true,
           x: smtpad.x,
           y: smtpad.y,
           radius: smtpad.radius!,
@@ -136,6 +139,7 @@ export const convertCircuitJsonToInputProblem = (
           padId: smtpad.pcb_smtpad_id,
           layer: smtpad.layer,
           connectivityKey,
+          isSmtPad: true,
           x: smtpad.x,
           y: smtpad.y,
           width: smtpad.width!,
@@ -144,6 +148,15 @@ export const convertCircuitJsonToInputProblem = (
           ccwRotation:
             smtpad.shape === "rotated_pill" ? smtpad.ccw_rotation : 0,
         } as InputPillPad)
+      } else if (smtpad.shape === "polygon") {
+        pads.push({
+          shape: "polygon",
+          padId: smtpad.pcb_smtpad_id,
+          layer: smtpad.layer,
+          connectivityKey,
+          isSmtPad: true,
+          points: smtpad.points,
+        } as InputPolygonPad)
       }
     } else if (elm.type === "pcb_plated_hole") {
       const platedHole = elm as PcbPlatedHole
