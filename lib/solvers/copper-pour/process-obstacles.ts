@@ -115,7 +115,7 @@ export const processObstaclesForPour = (
     const isOnNet = pad.connectivityKey === pourConnectivityKey
 
     if (isOnNet) {
-      if (pad.isPlatedHole && use_thermal_reliefs) {
+      if ((pad.isPlatedHole || pad.isSmtPad) && use_thermal_reliefs) {
         polygonsToSubtract.push(
           ...generateThermalReliefClearances(
             pad,
