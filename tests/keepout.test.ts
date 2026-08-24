@@ -4,6 +4,7 @@ import {
   CopperPourPipelineSolver,
   convertCircuitJsonToInputProblem,
 } from "lib/index"
+import { runSolverAndRenderToSvg } from "./utils/run-solver-and-render-to-svg"
 
 const circuitJson = [
   {
@@ -54,7 +55,7 @@ const circuitJson = [
   },
 ] as AnyCircuitElement[]
 
-test("copper pours are clipped around keepouts on their layer", () => {
+test("copper pours are clipped around keepouts on their layer", async () => {
   const inputProblem = convertCircuitJsonToInputProblem(circuitJson, {
     layer: "top",
     source_net_id: "source_net_gnd",
@@ -73,4 +74,12 @@ test("copper pours are clipped around keepouts on their layer", () => {
   const output = new CopperPourPipelineSolver(inputProblem).getOutput()
   expect(output.brep_shapes).toHaveLength(1)
   expect(output.brep_shapes[0]!.inner_rings).toHaveLength(2)
+
+  const svg = runSolverAndRenderToSvg(circuitJson, {
+    layer: "top",
+    net_name: "GND",
+    pad_margin: 0.2,
+    trace_margin: 0.1,
+  })
+  await expect(svg).toMatchSvgSnapshot(import.meta.path, "keepout")
 })
