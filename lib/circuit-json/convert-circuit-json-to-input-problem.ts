@@ -2,6 +2,7 @@ import type {
   AnyCircuitElement,
   PcbBoard,
   PcbHole,
+  PCBKeepout,
   PcbPlatedHole,
   PcbSmtPad,
   PcbTrace,
@@ -276,6 +277,34 @@ export const convertCircuitJsonToInputProblem = (
           connectivityKey: `cutout:${cutout.pcb_cutout_id}`,
           points: cutout.points,
         } as InputPolygonPad)
+      }
+    } else if (elm.type === "pcb_keepout") {
+      const keepout = elm as PCBKeepout
+      if (!keepout.layers.includes(options.layer)) continue
+
+      if (keepout.shape === "rect") {
+        pads.push({
+          shape: "rect",
+          padId: keepout.pcb_keepout_id,
+          layer: options.layer,
+          connectivityKey: `keepout:${keepout.pcb_keepout_id}`,
+          bounds: {
+            minX: keepout.center.x - keepout.width / 2,
+            minY: keepout.center.y - keepout.height / 2,
+            maxX: keepout.center.x + keepout.width / 2,
+            maxY: keepout.center.y + keepout.height / 2,
+          },
+        } as InputRectPad)
+      } else if (keepout.shape === "circle") {
+        pads.push({
+          shape: "circle",
+          padId: keepout.pcb_keepout_id,
+          layer: options.layer,
+          connectivityKey: `keepout:${keepout.pcb_keepout_id}`,
+          x: keepout.center.x,
+          y: keepout.center.y,
+          radius: keepout.radius,
+        } as InputCircularPad)
       }
     } else if (elm.type === "pcb_via") {
       const via = elm as PcbVia

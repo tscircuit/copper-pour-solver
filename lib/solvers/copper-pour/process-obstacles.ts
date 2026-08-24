@@ -131,9 +131,12 @@ export const processObstaclesForPour = (
     const isHoleOrCutout =
       pad.connectivityKey.startsWith("hole:") ||
       pad.connectivityKey.startsWith("cutout:")
+    const isKeepout = pad.connectivityKey.startsWith("keepout:")
+    const getMargin = (defaultMargin: number) =>
+      isKeepout ? 0 : isHoleOrCutout ? (cutoutMargin ?? 0) : defaultMargin
 
     if (isCircularPad(pad)) {
-      const margin = isHoleOrCutout ? (cutoutMargin ?? 0) : padMargin
+      const margin = getMargin(padMargin)
       polygonsToSubtract.push(
         circleToPolygon({ x: pad.x, y: pad.y }, pad.radius + margin),
       )
@@ -141,7 +144,7 @@ export const processObstaclesForPour = (
     }
 
     if (isPillPad(pad)) {
-      const margin = isHoleOrCutout ? (cutoutMargin ?? 0) : padMargin
+      const margin = getMargin(padMargin)
       polygonsToSubtract.push(
         pillToPolygon(
           { x: pad.x, y: pad.y },
@@ -155,7 +158,7 @@ export const processObstaclesForPour = (
     }
 
     if (isRectPad(pad)) {
-      const margin = isHoleOrCutout ? (cutoutMargin ?? 0) : padMargin
+      const margin = getMargin(padMargin)
       const { bounds } = pad
       polygonsToSubtract.push(
         boxToPolygon(
@@ -169,7 +172,7 @@ export const processObstaclesForPour = (
     }
 
     if (isRotatedRectPad(pad)) {
-      const margin = isHoleOrCutout ? (cutoutMargin ?? 0) : padMargin
+      const margin = getMargin(padMargin)
       polygonsToSubtract.push(
         rotatedBoxToPolygon(
           { x: pad.x, y: pad.y },
@@ -182,7 +185,7 @@ export const processObstaclesForPour = (
     }
 
     if (isPolygonPad(pad)) {
-      const margin = isHoleOrCutout ? (cutoutMargin ?? 0) : 0
+      const margin = getMargin(0)
 
       const seen = new Set<string>()
       const uniquePoints = pad.points.filter((p) => {
