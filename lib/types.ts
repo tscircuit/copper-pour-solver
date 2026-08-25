@@ -5,6 +5,11 @@ export interface InputPourRegion {
   shape: "rect"
   layer: string
   bounds: Bounds
+  /**
+   * Optional physical PCB boundary in board coordinates (millimetres) used to
+   * apply board-edge clearance independently from a custom clipping outline.
+   */
+  boardEdgeOutline?: Point[]
   outline?: Point[]
   connectivityKey: string
   padMargin: number
