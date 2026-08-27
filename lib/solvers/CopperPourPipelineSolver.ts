@@ -65,7 +65,7 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
           thermal_relief_spoke_width: region.thermal_relief_spoke_width,
           thermal_relief_spoke_count: region.thermal_relief_spoke_count,
         },
-        region.outline,
+        region.boardEdgeOutline ?? region.outline,
       )
 
       const pourMargin =

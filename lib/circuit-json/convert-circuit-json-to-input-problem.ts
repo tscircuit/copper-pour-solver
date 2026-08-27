@@ -401,6 +401,7 @@ export const convertCircuitJsonToInputProblem = (
       shape: "rect" as const,
       layer: options.layer,
       bounds,
+      boardEdgeOutline: options.board_edge_outline,
       outline,
       connectivityKey: pourConnectivityKey,
       padMargin: options.pad_margin,

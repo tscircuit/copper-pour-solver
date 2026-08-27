@@ -15,6 +15,11 @@ export interface ConvertCircuitJsonToInputProblemOptions {
   trace_margin: number
   pour_margin?: number
   board_edge_margin?: number
+  /**
+   * Physical PCB boundary used for board_edge_margin when outline is only a
+   * clipping region, such as one piece of a partitioned same-net pour.
+   */
+  board_edge_outline?: Point[]
   cutout_margin?: number
   /** Enables thermal reliefs for same-net plated holes and SMT pads. */
   use_thermal_reliefs?: boolean
