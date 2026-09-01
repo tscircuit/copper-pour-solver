@@ -12,6 +12,7 @@ import type {
 import { getFullConnectivityMapFromCircuitJson } from "circuit-json-to-connectivity-map"
 import type {
   InputCircularPad,
+  InputOvalPad,
   InputPad,
   InputPillPad,
   InputPolygonPad,
@@ -195,6 +196,19 @@ export const convertCircuitJsonToInputProblem = (
           radius: Math.min(platedHole.outer_width, platedHole.outer_height) / 2,
           ccwRotation: platedHole.ccw_rotation,
         } as InputPillPad)
+      } else if (platedHole.shape === "oval") {
+        pads.push({
+          shape: "oval",
+          padId: platedHole.pcb_plated_hole_id,
+          layer: options.layer,
+          connectivityKey,
+          isPlatedHole: true,
+          x: platedHole.x,
+          y: platedHole.y,
+          width: platedHole.outer_width,
+          height: platedHole.outer_height,
+          ccwRotation: platedHole.ccw_rotation,
+        } as InputOvalPad)
       } else if (platedHole.shape === "circular_hole_with_rect_pad") {
         const rectWidth = platedHole.rect_pad_width
         const rectHeight = platedHole.rect_pad_height
