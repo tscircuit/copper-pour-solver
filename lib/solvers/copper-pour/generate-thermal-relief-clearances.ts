@@ -17,7 +17,7 @@ import {
 import {
   boxToPolygon,
   circleToPolygon,
-  ellipseToPolygon,
+  ovalToPolygon,
   pillToPolygon,
   rotatedBoxToPolygon,
   segmentToPolygon,
@@ -94,7 +94,7 @@ const padToPolygons = (
   }
 
   if (pad.shape === "oval") {
-    const polygon = ellipseToPolygon(
+    const polygon = ovalToPolygon(
       { x: pad.x, y: pad.y },
       pad.width,
       pad.height,

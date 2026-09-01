@@ -17,7 +17,7 @@ export const circleToPolygon = (
   return points
 }
 
-export const ellipseToPolygon = (
+export const ovalToPolygon = (
   center: Point,
   width: number,
   height: number,

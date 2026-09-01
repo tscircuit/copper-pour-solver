@@ -14,7 +14,7 @@ import { offsetPolygon } from "./manifold-geometry-adapter"
 import {
   boxToPolygon,
   circleToPolygon,
-  ellipseToPolygon,
+  ovalToPolygon,
   pillToPolygon,
   rotatedBoxToPolygon,
   segmentToPolygon,
@@ -162,7 +162,7 @@ export const processObstaclesForPour = (
 
     if (isOvalPad(pad)) {
       const margin = getMargin(padMargin)
-      const polygon = ellipseToPolygon(
+      const polygon = ovalToPolygon(
         { x: pad.x, y: pad.y },
         pad.width,
         pad.height,
