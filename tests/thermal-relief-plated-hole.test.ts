@@ -115,6 +115,20 @@ const cases = [
     thermal_relief_spoke_count: 3,
   },
   {
+    name: "rotated oval with 4 spokes",
+    snapshotName: "thermal-relief-oval-4-spokes",
+    platedHoleShape: {
+      shape: "oval",
+      outer_width: 1.8,
+      outer_height: 3,
+      hole_width: 1,
+      hole_height: 1.4,
+      ccw_rotation: 30,
+    },
+    thermal_relief_spoke_width: 0.25,
+    thermal_relief_spoke_count: 4,
+  },
+  {
     name: "rotated rectangular pad with 6 spokes",
     snapshotName: "thermal-relief-rect-pad-6-spokes",
     platedHoleShape: {

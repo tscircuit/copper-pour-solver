@@ -67,6 +67,15 @@ export interface InputPillPad extends BaseInputPad {
   ccwRotation: number
 }
 
+export interface InputOvalPad extends BaseInputPad {
+  shape: "oval"
+  x: number
+  y: number
+  width: number
+  height: number
+  ccwRotation: number
+}
+
 export interface InputTracePad extends BaseInputPad {
   shape: "trace"
   width: number
@@ -83,6 +92,7 @@ export type InputPad =
   | InputRotatedRectPad
   | InputCircularPad
   | InputPillPad
+  | InputOvalPad
   | InputTracePad
   | InputPolygonPad
 

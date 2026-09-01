@@ -1,6 +1,7 @@
 import type { Point } from "@tscircuit/math-utils"
 import type {
   InputCircularPad,
+  InputOvalPad,
   InputPad,
   InputPillPad,
   InputPolygonPad,
@@ -16,6 +17,7 @@ import {
 import {
   boxToPolygon,
   circleToPolygon,
+  ellipseToPolygon,
   pillToPolygon,
   rotatedBoxToPolygon,
   segmentToPolygon,
@@ -24,6 +26,7 @@ import { normalizeRing, type PolygonRing } from "./polygon-ring"
 
 type SupportedThermalReliefPad =
   | InputCircularPad
+  | InputOvalPad
   | InputPillPad
   | InputPolygonPad
   | InputRectPad
@@ -60,7 +63,11 @@ const getPadCenter = (pad: SupportedThermalReliefPad): Point => {
 }
 
 const getPadRotation = (pad: SupportedThermalReliefPad): number => {
-  if (pad.shape === "rotated_rect" || pad.shape === "pill") {
+  if (
+    pad.shape === "rotated_rect" ||
+    pad.shape === "pill" ||
+    pad.shape === "oval"
+  ) {
     return pad.ccwRotation
   }
   return 0
@@ -84,6 +91,16 @@ const padToPolygons = (
         pad.ccwRotation,
       ),
     ]
+  }
+
+  if (pad.shape === "oval") {
+    const polygon = ellipseToPolygon(
+      { x: pad.x, y: pad.y },
+      pad.width,
+      pad.height,
+      pad.ccwRotation,
+    )
+    return margin > 0 ? offsetPolygon(polygon, margin, "Round") : [polygon]
   }
 
   if (pad.shape === "rect") {
@@ -119,6 +136,7 @@ const isSupportedThermalReliefPad = (
   pad: InputPad,
 ): pad is SupportedThermalReliefPad =>
   pad.shape === "circle" ||
+  pad.shape === "oval" ||
   pad.shape === "pill" ||
   pad.shape === "polygon" ||
   pad.shape === "rect" ||

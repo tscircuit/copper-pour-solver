@@ -17,6 +17,35 @@ export const circleToPolygon = (
   return points
 }
 
+export const ellipseToPolygon = (
+  center: Point,
+  width: number,
+  height: number,
+  ccwRotation = 0,
+  numSegments = 32,
+): PolygonRing => {
+  if (width <= 0 || height <= 0) return []
+
+  const radiusX = width / 2
+  const radiusY = height / 2
+  const rotation = (ccwRotation * Math.PI) / 180
+  const cosRotation = Math.cos(rotation)
+  const sinRotation = Math.sin(rotation)
+  const points: PolygonRing = []
+
+  for (let i = 0; i < numSegments; i++) {
+    const angle = (i / numSegments) * 2 * Math.PI
+    const x = radiusX * Math.cos(angle)
+    const y = radiusY * Math.sin(angle)
+    points.push({
+      x: center.x + x * cosRotation - y * sinRotation,
+      y: center.y + x * sinRotation + y * cosRotation,
+    })
+  }
+
+  return points
+}
+
 export const boxToPolygon = (
   minX: number,
   minY: number,
