@@ -27,5 +27,10 @@ export interface ConvertCircuitJsonToInputProblemOptions {
   thermal_relief_spoke_width?: number
   /** Number of evenly spaced thermal relief spokes. Defaults to 4. */
   thermal_relief_spoke_count?: number
+  /**
+   * Removes exact post-clearance islands that cannot reach same-net copper.
+   * Intended for generated/implicit pours; explicit pours remain unchanged.
+   */
+  remove_disconnected_islands?: boolean
   outline?: Point[]
 }

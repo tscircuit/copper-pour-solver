@@ -428,6 +428,7 @@ export const convertCircuitJsonToInputProblem = (
       use_thermal_reliefs: options.use_thermal_reliefs,
       thermal_relief_spoke_width: options.thermal_relief_spoke_width,
       thermal_relief_spoke_count: options.thermal_relief_spoke_count,
+      removeDisconnectedIslands: options.remove_disconnected_islands,
     },
   ]
 
