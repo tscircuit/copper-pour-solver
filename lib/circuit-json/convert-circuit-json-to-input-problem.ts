@@ -20,7 +20,7 @@ import type {
   InputRectPad,
   InputRotatedRectPad,
   InputTracePad,
-} from "lib/types"
+} from "../types"
 import { buildSubcircuitConnectivityLookup } from "./buildSubcircuitConnectivityLookup"
 import type { ConvertCircuitJsonToInputProblemOptions } from "./ConvertCircuitJsonToInputProblemOptions"
 import { resolvePourConnectivityKey } from "./resolvePourConnectivityKey"

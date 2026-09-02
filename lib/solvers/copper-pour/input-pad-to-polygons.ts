@@ -1,4 +1,4 @@
-import type { InputPad } from "lib/types"
+import type { InputPad } from "../../types"
 import {
   boxToPolygon,
   circleToPolygon,

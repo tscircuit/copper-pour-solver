@@ -1,6 +1,6 @@
 import { BasePipelineSolver } from "@tscircuit/solver-utils"
 import type { BRepShape } from "circuit-json"
-import type { InputProblem, PipelineOutput } from "lib/types"
+import type { InputProblem, PipelineOutput } from "../types"
 import { generateBRep } from "./copper-pour/generate-brep"
 import { getBoardPolygon } from "./copper-pour/get-board-polygon"
 import {

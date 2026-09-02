@@ -1,5 +1,5 @@
 import type { Point } from "@tscircuit/math-utils"
-import type { InputPad } from "lib/types"
+import type { InputPad } from "../../types"
 import { generateThermalReliefClearances } from "./generate-thermal-relief-clearances"
 import { inputPadToPolygons } from "./input-pad-to-polygons"
 import {

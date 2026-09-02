@@ -1,4 +1,4 @@
-import type { InputPourRegion } from "lib/types"
+import type { InputPourRegion } from "../../types"
 import { normalizeRing, type PolygonRing } from "./polygon-ring"
 
 export const getBoardPolygon = (region: InputPourRegion): PolygonRing => {

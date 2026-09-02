@@ -1,4 +1,4 @@
-import type { InputPad, InputPourRegion } from "lib/types"
+import type { InputPad, InputPourRegion } from "../../types"
 import { inputPadToPolygons } from "./input-pad-to-polygons"
 import {
   crossSectionFromPolygons,
