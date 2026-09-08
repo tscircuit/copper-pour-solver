@@ -209,13 +209,20 @@ export const convertCircuitJsonToInputProblem = (
           height: platedHole.outer_height,
           ccwRotation: platedHole.ccw_rotation,
         } as InputOvalPad)
-      } else if (platedHole.shape === "circular_hole_with_rect_pad") {
+      } else if (
+        platedHole.shape === "circular_hole_with_rect_pad" ||
+        platedHole.shape === "pill_hole_with_rect_pad" ||
+        platedHole.shape === "rotated_pill_hole_with_rect_pad"
+      ) {
         const rectWidth = platedHole.rect_pad_width
         const rectHeight = platedHole.rect_pad_height
         if (typeof rectWidth !== "number" || typeof rectHeight !== "number") {
           continue
         }
-        const rectRotation = platedHole.rect_ccw_rotation ?? 0
+        const rectRotation =
+          platedHole.shape === "pill_hole_with_rect_pad"
+            ? 0
+            : (platedHole.rect_ccw_rotation ?? 0)
         if (rectRotation === 0) {
           pads.push({
             shape: "rect",
