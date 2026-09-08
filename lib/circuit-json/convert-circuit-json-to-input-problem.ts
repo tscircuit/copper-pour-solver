@@ -1,8 +1,8 @@
 import type {
   AnyCircuitElement,
+  PCBKeepout,
   PcbBoard,
   PcbHole,
-  PCBKeepout,
   PcbPlatedHole,
   PcbSmtPad,
   PcbTrace,
@@ -251,6 +251,30 @@ export const convertCircuitJsonToInputProblem = (
             ccwRotation: rectRotation,
           } as InputRotatedRectPad)
         }
+      } else if (platedHole.shape === "hole_with_polygon_pad") {
+        const outline = platedHole.pad_outline
+        if (!Array.isArray(outline) || outline.length < 3) continue
+        const rotationDeg = Number(platedHole.ccw_rotation) || 0
+        const rotation = (rotationDeg * Math.PI) / 180
+        const cos = Math.cos(rotation)
+        const sin = Math.sin(rotation)
+        const cx = Number(platedHole.x)
+        const cy = Number(platedHole.y)
+        pads.push({
+          shape: "polygon",
+          padId: platedHole.pcb_plated_hole_id,
+          layer: options.layer,
+          connectivityKey,
+          isPlatedHole: true,
+          points: outline.map((point) => {
+            const lx = Number(point.x)
+            const ly = Number(point.y)
+            return {
+              x: cx + lx * cos - ly * sin,
+              y: cy + lx * sin + ly * cos,
+            }
+          }),
+        } as InputPolygonPad)
       }
     } else if (elm.type === "pcb_hole") {
       const hole = elm as PcbHole
