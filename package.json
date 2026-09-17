@@ -1,6 +1,8 @@
 {
   "name": "@tscircuit/copper-pour-solver",
   "main": "dist/index.js",
+  "module": "lib/index.ts",
+  "types": "lib/index.ts",
   "version": "0.0.45",
   "repository": {
     "type": "git",

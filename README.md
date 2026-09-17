@@ -152,6 +152,12 @@ lower-priority region is cleared from higher-priority, different-net copper by
 the larger of the two regions' `pourMargin` values. Same-net regions and regions
 on different layers do not block each other.
 
+Set `removeDisconnectedIslands` on generated pour regions to remove exact
+post-clearance islands that cannot reach a same-net pad or trace. Adjacent
+same-net regions are checked together, so polygon partition boundaries do not
+break valid connections. The Circuit JSON adapter exposes this as
+`remove_disconnected_islands`.
+
 ## Output
 
 `getOutput()` returns:
