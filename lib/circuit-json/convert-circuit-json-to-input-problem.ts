@@ -1,8 +1,8 @@
 import type {
   AnyCircuitElement,
+  PCBKeepout,
   PcbBoard,
   PcbHole,
-  PCBKeepout,
   PcbPlatedHole,
   PcbSmtPad,
   PcbTrace,
@@ -435,7 +435,10 @@ export const convertCircuitJsonToInputProblem = (
       use_thermal_reliefs: options.use_thermal_reliefs,
       thermal_relief_spoke_width: options.thermal_relief_spoke_width,
       thermal_relief_spoke_count: options.thermal_relief_spoke_count,
-      removeDisconnectedIslands: options.remove_disconnected_islands,
+      removeDisconnectedIslands:
+        options.island_removal_mode === 0 ||
+        options.island_removal_mode === "always" ||
+        (options.remove_disconnected_islands ?? false),
     },
   ]
 

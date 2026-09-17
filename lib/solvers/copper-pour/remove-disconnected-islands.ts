@@ -50,6 +50,10 @@ export const removeDisconnectedIslands = ({
           pad.connectivityKey === firstRegion.connectivityKey,
       )
       .flatMap((pad) => inputPadToPolygons(pad, 0))
+
+    if (sameNetPadPolygons.length === 0) {
+      continue
+    }
     const rootSections = [
       crossSectionFromPolygons(sameNetPadPolygons),
       ...regionIndices

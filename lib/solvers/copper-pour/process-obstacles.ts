@@ -114,10 +114,7 @@ export const processObstaclesForPour = (
     const getMargin = (defaultMargin: number) =>
       isKeepout ? 0 : isHoleOrCutout ? (cutoutMargin ?? 0) : defaultMargin
 
-    const defaultMargin =
-      pad.shape === "trace"
-        ? traceMargin
-        : padMargin
+    const defaultMargin = pad.shape === "trace" ? traceMargin : padMargin
     polygonsToSubtract.push(
       ...inputPadToPolygons(pad, getMargin(defaultMargin)),
     )

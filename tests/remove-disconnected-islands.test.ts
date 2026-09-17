@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
 import type { BRepShape } from "circuit-json"
 import { CopperPourPipelineSolver } from "lib/index"
-import type { InputProblem, InputPourRegion } from "lib/types"
+import type { InputPourRegion, InputProblem } from "lib/types"
 
 type Point = { x: number; y: number }
 
@@ -104,4 +104,107 @@ test("preserves adjacent same-net implicit regions as one connection", () => {
 
   expect(containsPoint(leftShapes!, { x: -3, y: 0 })).toBe(true)
   expect(containsPoint(rightShapes!, { x: 3, y: 0 })).toBe(true)
+})
+
+test("keeps disconnected islands when removeDisconnectedIslands is false", () => {
+  const input: InputProblem = {
+    regionsForPour: [
+      {
+        ...makeRegion({ minX: -5, minY: -3, maxX: 5, maxY: 3 }),
+        removeDisconnectedIslands: false,
+      },
+    ],
+    pads: [
+      {
+        shape: "circle",
+        padId: "gnd-pad",
+        layer: "top",
+        connectivityKey: "net:GND",
+        x: -3,
+        y: 0,
+        radius: 0.4,
+      },
+      {
+        shape: "trace",
+        padId: "foreign-trace",
+        layer: "top",
+        connectivityKey: "net:VBAT",
+        width: 0.2,
+        segments: [
+          { x: 0, y: -4 },
+          { x: 0, y: 4 },
+        ],
+      },
+    ],
+  }
+
+  const [shapes] = new CopperPourPipelineSolver(input).getOutput()
+    .brep_shapes_by_region
+
+  expect(containsPoint(shapes!, { x: -3, y: 0 })).toBe(true)
+  expect(containsPoint(shapes!, { x: 3, y: 0 })).toBe(true)
+})
+
+test("convertCircuitJsonToInputProblem sets removeDisconnectedIslands based on island_removal_mode", async () => {
+  const { convertCircuitJsonToInputProblem } = await import("lib/index")
+  const circuitJson: any = [
+    {
+      type: "pcb_board",
+      pcb_board_id: "board1",
+      width: 20,
+      height: 20,
+      center: { x: 0, y: 0 },
+    },
+    {
+      type: "source_net",
+      source_net_id: "net_gnd",
+      name: "GND",
+      subcircuit_connectivity_map_key: "key_gnd",
+    },
+  ]
+
+  const problem0 = convertCircuitJsonToInputProblem(circuitJson, {
+    layer: "top",
+    pad_margin: 0.2,
+    trace_margin: 0.2,
+    source_net_id: "net_gnd",
+    island_removal_mode: 0,
+  })
+  expect(problem0.regionsForPour[0]?.removeDisconnectedIslands).toBe(true)
+
+  const problemAlways = convertCircuitJsonToInputProblem(circuitJson, {
+    layer: "top",
+    pad_margin: 0.2,
+    trace_margin: 0.2,
+    source_net_id: "net_gnd",
+    island_removal_mode: "always",
+  })
+  expect(problemAlways.regionsForPour[0]?.removeDisconnectedIslands).toBe(true)
+
+  const problem1 = convertCircuitJsonToInputProblem(circuitJson, {
+    layer: "top",
+    pad_margin: 0.2,
+    trace_margin: 0.2,
+    source_net_id: "net_gnd",
+    island_removal_mode: 1,
+  })
+  expect(problem1.regionsForPour[0]?.removeDisconnectedIslands).toBe(false)
+
+  const problemNever = convertCircuitJsonToInputProblem(circuitJson, {
+    layer: "top",
+    pad_margin: 0.2,
+    trace_margin: 0.2,
+    source_net_id: "net_gnd",
+    island_removal_mode: "never",
+  })
+  expect(problemNever.regionsForPour[0]?.removeDisconnectedIslands).toBe(false)
+
+  const problemFlag = convertCircuitJsonToInputProblem(circuitJson, {
+    layer: "top",
+    pad_margin: 0.2,
+    trace_margin: 0.2,
+    source_net_id: "net_gnd",
+    remove_disconnected_islands: true,
+  })
+  expect(problemFlag.regionsForPour[0]?.removeDisconnectedIslands).toBe(true)
 })
