@@ -24,9 +24,10 @@
     "@tscircuit/solver-utils": "^0.0.14",
     "@types/bun": "latest",
     "bun-match-svg": "^0.0.13",
-    "circuit-json": "^0.0.432",
+    "circuit-json": "0.0.495",
     "circuit-json-to-connectivity-map": "^0.0.23",
     "circuit-to-svg": "^0.0.350",
+    "format-si-unit": "^0.0.7",
     "react-cosmos": "^7.0.0",
     "react-cosmos-plugin-vite": "^7.0.0",
     "tscircuit": "^0.0.1209",
@@ -37,6 +38,7 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@tscircuit/manifold-2d": "^0.0.6"
+    "@tscircuit/manifold-2d": "^0.0.6",
+    "transformation-matrix": "^3.1.0"
   }
 }

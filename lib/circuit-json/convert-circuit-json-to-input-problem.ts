@@ -10,6 +10,12 @@ import type {
   Point,
 } from "circuit-json"
 import { getFullConnectivityMapFromCircuitJson } from "circuit-json-to-connectivity-map"
+import {
+  applyToPoints,
+  compose,
+  rotateDEG,
+  translate,
+} from "transformation-matrix"
 import type {
   InputCircularPad,
   InputOvalPad,
@@ -171,7 +177,22 @@ export const convertCircuitJsonToInputProblem = (
         connectivityKey = `unconnected-plated-hole:${platedHole.pcb_plated_hole_id}`
       }
 
-      if (platedHole.shape === "circle") {
+      if (platedHole.shape === "hole_with_polygon_pad") {
+        pads.push({
+          shape: "polygon",
+          padId: platedHole.pcb_plated_hole_id,
+          layer: options.layer,
+          connectivityKey,
+          isPlatedHole: true,
+          points: applyToPoints(
+            compose(
+              translate(platedHole.x, platedHole.y),
+              rotateDEG(platedHole.ccw_rotation ?? 0),
+            ),
+            platedHole.pad_outline,
+          ),
+        })
+      } else if (platedHole.shape === "circle") {
         pads.push({
           shape: "circle",
           padId: platedHole.pcb_plated_hole_id,
