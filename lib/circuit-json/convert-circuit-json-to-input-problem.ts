@@ -171,7 +171,23 @@ export const convertCircuitJsonToInputProblem = (
         connectivityKey = `unconnected-plated-hole:${platedHole.pcb_plated_hole_id}`
       }
 
-      if (platedHole.shape === "circle") {
+      if (platedHole.shape === "hole_with_polygon_pad") {
+        const ccwRotationRadians =
+          ((platedHole.ccw_rotation ?? 0) * Math.PI) / 180
+        const cosRotation = Math.cos(ccwRotationRadians)
+        const sinRotation = Math.sin(ccwRotationRadians)
+        pads.push({
+          shape: "polygon",
+          padId: platedHole.pcb_plated_hole_id,
+          layer: options.layer,
+          connectivityKey,
+          isPlatedHole: true,
+          points: platedHole.pad_outline.map((vertex) => ({
+            x: platedHole.x + vertex.x * cosRotation - vertex.y * sinRotation,
+            y: platedHole.y + vertex.x * sinRotation + vertex.y * cosRotation,
+          })),
+        })
+      } else if (platedHole.shape === "circle") {
         pads.push({
           shape: "circle",
           padId: platedHole.pcb_plated_hole_id,

@@ -6,7 +6,7 @@ import {
 } from "lib/index"
 import { runSolverAndRenderToSvg } from "./utils/run-solver-and-render-to-svg"
 
-test("repro: polygon plated hole is omitted from ground pour clearance", async () => {
+test("polygon and rectangular plated holes receive ground pour clearance", async () => {
   const clearance = 0.3
   const circuit = new Circuit()
   circuit.add(
@@ -78,25 +78,36 @@ test("repro: polygon plated hole is omitted from ground pour clearance", async (
     board_edge_margin: 0.5,
   })
 
-  // Characterize the bug, not the desired behavior: only the rectangular pad survives.
   expect(inputProblem.pads.map((pad) => pad.padId)).toEqual([
+    polygonPad.pcb_plated_hole_id,
     rectPad.pcb_plated_hole_id,
   ])
   expect(
     inputProblem.pads.some(
       (pad) => pad.padId === polygonPad.pcb_plated_hole_id,
     ),
-  ).toBe(false)
+  ).toBe(true)
   const output = new CopperPourPipelineSolver(inputProblem).getOutput()
   expect(output.brep_shapes).toHaveLength(1)
-  expect(output.brep_shapes[0]!.inner_rings).toHaveLength(1)
-  const clearanceVertices = output.brep_shapes[0]!.inner_rings[0]!.vertices
-  expect(Math.min(...clearanceVertices.map((point) => point.x))).toBeCloseTo(
-    1.7,
-  )
-  expect(Math.max(...clearanceVertices.map((point) => point.x))).toBeCloseTo(
-    4.3,
-  )
+  const clearanceRings = output.brep_shapes[0]!.inner_rings
+  expect(clearanceRings).toHaveLength(2)
+  for (const pad of platedHoles) {
+    const ring = clearanceRings.find((ring) =>
+      ring.vertices.every((point) => Math.abs(point.x - pad.x) < 2),
+    )!
+    expect(Math.min(...ring.vertices.map((point) => point.x))).toBeCloseTo(
+      pad.x - 1 - clearance,
+    )
+    expect(Math.max(...ring.vertices.map((point) => point.x))).toBeCloseTo(
+      pad.x + 1 + clearance,
+    )
+    expect(Math.min(...ring.vertices.map((point) => point.y))).toBeCloseTo(
+      -1 - clearance,
+    )
+    expect(Math.max(...ring.vertices.map((point) => point.y))).toBeCloseTo(
+      1 + clearance,
+    )
+  }
 
   const svg = runSolverAndRenderToSvg(circuitJson, {
     layer: "bottom",
@@ -106,4 +117,48 @@ test("repro: polygon plated hole is omitted from ground pour clearance", async (
     board_edge_margin: 0.5,
   })
   await expect(svg).toMatchSvgSnapshot(import.meta.path)
+
+  if (polygonPad.shape !== "hole_with_polygon_pad")
+    throw new Error("Expected polygon pad")
+  polygonPad.x = -3
+  polygonPad.y = 1
+  polygonPad.ccw_rotation = 90
+  polygonPad.hole_offset_x = 0.25
+  polygonPad.pad_outline = [
+    { x: -1.5, y: -0.5 },
+    { x: 1.5, y: -0.5 },
+    { x: 1.5, y: 0.5 },
+    { x: -1.5, y: 0.5 },
+  ]
+  for (const layer of ["top", "bottom"] as const) {
+    const rotatedInput = convertCircuitJsonToInputProblem(circuitJson, {
+      layer,
+      source_net_name: "GND",
+      pad_margin: clearance,
+      trace_margin: clearance,
+    })
+    expect(
+      rotatedInput.pads.find(
+        (pad) => pad.padId === polygonPad.pcb_plated_hole_id,
+      ),
+    ).toMatchObject({
+      shape: "polygon",
+      isPlatedHole: true,
+      points: [
+        { x: expect.closeTo(-2.5), y: expect.closeTo(-0.5) },
+        { x: expect.closeTo(-2.5), y: expect.closeTo(2.5) },
+        { x: expect.closeTo(-3.5), y: expect.closeTo(2.5) },
+        { x: expect.closeTo(-3.5), y: expect.closeTo(-0.5) },
+      ],
+    })
+    const sameNetInput = convertCircuitJsonToInputProblem(circuitJson, {
+      layer,
+      source_net_name: "VCC",
+      pad_margin: clearance,
+      trace_margin: clearance,
+    })
+    const sameNetOutput = new CopperPourPipelineSolver(sameNetInput).getOutput()
+    expect(sameNetOutput.brep_shapes).toHaveLength(1)
+    expect(sameNetOutput.brep_shapes[0]!.inner_rings).toHaveLength(0)
+  }
 })
