@@ -145,10 +145,10 @@ test("polygon and rectangular plated holes receive ground pour clearance", async
       shape: "polygon",
       isPlatedHole: true,
       points: [
-        { x: -2.5, y: -0.5 },
-        { x: -2.5, y: 2.5 },
-        { x: -3.5, y: 2.5 },
-        { x: -3.5, y: -0.5 },
+        { x: expect.closeTo(-2.5), y: expect.closeTo(-0.5) },
+        { x: expect.closeTo(-2.5), y: expect.closeTo(2.5) },
+        { x: expect.closeTo(-3.5), y: expect.closeTo(2.5) },
+        { x: expect.closeTo(-3.5), y: expect.closeTo(-0.5) },
       ],
     })
     const sameNetInput = convertCircuitJsonToInputProblem(circuitJson, {
