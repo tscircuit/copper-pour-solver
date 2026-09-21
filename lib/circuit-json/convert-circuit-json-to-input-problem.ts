@@ -10,12 +10,7 @@ import type {
   Point,
 } from "circuit-json"
 import { getFullConnectivityMapFromCircuitJson } from "circuit-json-to-connectivity-map"
-import {
-  applyToPoints,
-  compose,
-  rotateDEG,
-  translate,
-} from "transformation-matrix"
+import { point } from "@flatten-js/core"
 import type {
   InputCircularPad,
   InputOvalPad,
@@ -184,12 +179,10 @@ export const convertCircuitJsonToInputProblem = (
           layer: options.layer,
           connectivityKey,
           isPlatedHole: true,
-          points: applyToPoints(
-            compose(
-              translate(platedHole.x, platedHole.y),
-              rotateDEG(platedHole.ccw_rotation ?? 0),
-            ),
-            platedHole.pad_outline,
+          points: platedHole.pad_outline.map((vertex) =>
+            point(vertex.x, vertex.y)
+              .rotate(((platedHole.ccw_rotation ?? 0) * Math.PI) / 180)
+              .translate(platedHole.x, platedHole.y),
           ),
         })
       } else if (platedHole.shape === "circle") {
