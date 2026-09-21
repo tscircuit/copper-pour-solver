@@ -10,7 +10,6 @@ import type {
   Point,
 } from "circuit-json"
 import { getFullConnectivityMapFromCircuitJson } from "circuit-json-to-connectivity-map"
-import { point } from "@flatten-js/core"
 import type {
   InputCircularPad,
   InputOvalPad,
@@ -173,17 +172,20 @@ export const convertCircuitJsonToInputProblem = (
       }
 
       if (platedHole.shape === "hole_with_polygon_pad") {
+        const ccwRotationRadians =
+          ((platedHole.ccw_rotation ?? 0) * Math.PI) / 180
+        const cosRotation = Math.cos(ccwRotationRadians)
+        const sinRotation = Math.sin(ccwRotationRadians)
         pads.push({
           shape: "polygon",
           padId: platedHole.pcb_plated_hole_id,
           layer: options.layer,
           connectivityKey,
           isPlatedHole: true,
-          points: platedHole.pad_outline.map((vertex) =>
-            point(vertex.x, vertex.y)
-              .rotate(((platedHole.ccw_rotation ?? 0) * Math.PI) / 180)
-              .translate(platedHole.x, platedHole.y),
-          ),
+          points: platedHole.pad_outline.map((vertex) => ({
+            x: platedHole.x + vertex.x * cosRotation - vertex.y * sinRotation,
+            y: platedHole.y + vertex.x * sinRotation + vertex.y * cosRotation,
+          })),
         })
       } else if (platedHole.shape === "circle") {
         pads.push({
