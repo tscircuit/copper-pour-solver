@@ -1,7 +1,7 @@
 import type {
   AnyCircuitElement,
-  PcbBoard,
   PCBKeepout,
+  PcbBoard,
   PcbPlatedHole,
   PcbSmtPad,
   PcbTrace,
@@ -269,6 +269,21 @@ export const convertCircuitJsonToInputProblem = (
       }
     } else if (elm.type === "pcb_hole") {
       const hole = elm
+      if (hole.hole_shape === "rect") {
+        pads.push({
+          shape: "rect",
+          padId: hole.pcb_hole_id,
+          layer: options.layer,
+          connectivityKey: `hole:${hole.pcb_hole_id}`,
+          bounds: {
+            minX: hole.x - hole.hole_width / 2,
+            minY: hole.y - hole.hole_height / 2,
+            maxX: hole.x + hole.hole_width / 2,
+            maxY: hole.y + hole.hole_height / 2,
+          },
+        })
+        continue
+      }
       if (hole.hole_shape === "pill" || hole.hole_shape === "rotated_pill") {
         let ccwRotation = 0
         if (hole.hole_shape === "rotated_pill") ccwRotation = hole.ccw_rotation

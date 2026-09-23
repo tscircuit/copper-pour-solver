@@ -6,7 +6,7 @@ import {
 } from "lib/index"
 import { runSolverAndRenderToSvg } from "./utils/run-solver-and-render-to-svg"
 
-test("repro: non-plated rectangular hole is omitted from copper-pour clearance", async () => {
+test("non-plated round and rectangular holes receive copper-pour clearance", async () => {
   const clearance = 0.3
   const roundHoleX = -3
   const rectangularHoleX = 3
@@ -65,14 +65,41 @@ test("repro: non-plated rectangular hole is omitted from copper-pour clearance",
       board_edge_margin: 0.5,
       cutout_margin: clearance,
     })
-    // Characterize the bug: the round hole survives, but the rectangle is missing.
-    expect(input.pads.map((pad) => pad.padId)).toEqual([roundHole.pcb_hole_id])
+    expect(input.pads.map((pad) => pad.padId)).toEqual([
+      roundHole.pcb_hole_id,
+      rectangularHole.pcb_hole_id,
+    ])
     expect(
-      input.pads.some((pad) => pad.padId === rectangularHole.pcb_hole_id),
-    ).toBe(false)
+      input.pads.find((pad) => pad.padId === rectangularHole.pcb_hole_id),
+    ).toMatchObject({
+      shape: "rect",
+      layer,
+      bounds: {
+        minX: rectangularHoleX - rectangularHoleWidth / 2,
+        minY: -rectangularHoleHeight / 2,
+        maxX: rectangularHoleX + rectangularHoleWidth / 2,
+        maxY: rectangularHoleHeight / 2,
+      },
+    })
     const output = new CopperPourPipelineSolver(input).getOutput()
     expect(output.brep_shapes).toHaveLength(1)
-    expect(output.brep_shapes[0]!.inner_rings).toHaveLength(1)
+    const clearanceRings = output.brep_shapes[0]!.inner_rings
+    expect(clearanceRings).toHaveLength(2)
+    const rectangularClearance = clearanceRings.find((ring) =>
+      ring.vertices.every((point) => point.x > 0),
+    )!
+    expect(
+      Math.min(...rectangularClearance.vertices.map((point) => point.x)),
+    ).toBeCloseTo(rectangularHoleX - rectangularHoleWidth / 2 - clearance)
+    expect(
+      Math.max(...rectangularClearance.vertices.map((point) => point.x)),
+    ).toBeCloseTo(rectangularHoleX + rectangularHoleWidth / 2 + clearance)
+    expect(
+      Math.min(...rectangularClearance.vertices.map((point) => point.y)),
+    ).toBeCloseTo(-rectangularHoleHeight / 2 - clearance)
+    expect(
+      Math.max(...rectangularClearance.vertices.map((point) => point.y)),
+    ).toBeCloseTo(rectangularHoleHeight / 2 + clearance)
   }
 
   expect(
