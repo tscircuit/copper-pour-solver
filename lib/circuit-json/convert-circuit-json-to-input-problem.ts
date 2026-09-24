@@ -440,7 +440,7 @@ export const convertCircuitJsonToInputProblem = (
     }
   }
 
-  const { width, height } = pcb_board
+  const { width, height, center } = pcb_board
 
   // Use pour-specific outline if provided, otherwise fall back to board outline
   const outline = options.outline ?? pcb_board.outline
@@ -457,10 +457,10 @@ export const convertCircuitJsonToInputProblem = (
     }
   } else {
     bounds = {
-      minX: -width! / 2,
-      minY: -height! / 2,
-      maxX: width! / 2,
-      maxY: height! / 2,
+      minX: center.x - width! / 2,
+      minY: center.y - height! / 2,
+      maxX: center.x + width! / 2,
+      maxY: center.y + height! / 2,
     }
   }
 

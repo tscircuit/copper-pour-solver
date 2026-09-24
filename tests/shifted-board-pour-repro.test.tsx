@@ -21,7 +21,7 @@ const getBrepBounds = (brepShape: BRepShape) => {
   }
 }
 
-test("converter places a shifted board's pour at the origin without an outline", async () => {
+test("converter aligns a shifted board's pour without an outline", async () => {
   const circuit = new Circuit()
   circuit.add(
     <board
@@ -34,7 +34,7 @@ test("converter places a shifted board's pour at the origin without an outline",
       <net name="GND" isGroundNet />
       <pcbnotetext text="SHIFTED BOARD" pcbY={2} fontSize={0.45} />
       <pcbnotetext
-        text="DIRECT CONVERTER: POUR REMAINS AT ORIGIN"
+        text="DIRECT CONVERTER: POUR FOLLOWS BOARD"
         pcbY={-2}
         fontSize={0.35}
       />
@@ -61,21 +61,11 @@ test("converter places a shifted board's pour at the origin without an outline",
     maxX: boardCenter.x + boardWidth / 2,
     maxY: boardCenter.y + boardHeight / 2,
   }
-  const currentPourBounds = {
-    minX: -boardWidth / 2,
-    minY: -boardHeight / 2,
-    maxX: boardWidth / 2,
-    maxY: boardHeight / 2,
-  }
-
-  expect(inputProblem.regionsForPour[0]?.bounds).toEqual(currentPourBounds)
-  expect(inputProblem.regionsForPour[0]?.bounds).not.toEqual(
-    expectedBoardBounds,
-  )
+  expect(inputProblem.regionsForPour[0]?.bounds).toEqual(expectedBoardBounds)
 
   const output = new CopperPourPipelineSolver(inputProblem).getOutput()
   expect(output.brep_shapes).toHaveLength(1)
-  expect(getBrepBounds(output.brep_shapes[0]!)).toEqual(currentPourBounds)
+  expect(getBrepBounds(output.brep_shapes[0]!)).toEqual(expectedBoardBounds)
 
   expect(
     runSolverAndRenderToSvg(circuitJson, {
