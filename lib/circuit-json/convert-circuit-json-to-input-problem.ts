@@ -1,3 +1,4 @@
+import { getTaperedTraceGeometry } from "../get-tapered-trace-geometry"
 import type {
   AnyCircuitElement,
   PCBKeepout,
@@ -416,12 +417,64 @@ export const convertCircuitJsonToInputProblem = (
         currentWidth = null
       }
 
-      for (const r of trace.route) {
+      for (const [routeIndex, r] of trace.route.entries()) {
         const ri = r as any
         const isWireOnLayer =
           ri.route_type === "wire" && ri.layer === options.layer
         if (isWireOnLayer) {
           const point = { x: ri.x, y: ri.y }
+          if (ri.width_interpolation_mode) {
+            // Preserve the incoming run, but never stroke over the taper.
+            currentSegmentGroup.push(point)
+            commitGroup()
+            const next = trace.route[routeIndex + 1]
+            if (!next) continue
+            const end = next.route_type === "through_pad" ? next.start : next
+            const endLayer =
+              next.route_type === "wire"
+                ? next.layer
+                : next.route_type === "via"
+                  ? next.from_layer
+                  : next.start_layer
+            if (endLayer !== ri.layer) continue
+            if (
+              ri.width_interpolation_mode !== "linear" &&
+              ri.width_interpolation_mode !== "quadratic"
+            )
+              continue
+            if (
+              !Number.isFinite(ri.start_width) ||
+              ri.start_width <= 0 ||
+              !Number.isFinite(ri.end_width) ||
+              ri.end_width <= 0 ||
+              ri.width !== ri.start_width
+            )
+              continue
+            if (
+              !Number.isFinite(end.x) ||
+              !Number.isFinite(end.y) ||
+              !Number.isFinite(ri.x) ||
+              !Number.isFinite(ri.y) ||
+              (end.x === ri.x && end.y === ri.y)
+            )
+              continue
+            const { outline } = getTaperedTraceGeometry({
+              start: point,
+              end,
+              start_width: ri.start_width,
+              end_width: ri.end_width,
+              width_interpolation_mode: ri.width_interpolation_mode,
+            })
+            pads.push({
+              shape: "polygon",
+              isTrace: true,
+              padId: `${trace.pcb_trace_id}-taper-${routeIndex}`,
+              connectivityKey,
+              layer: ri.layer,
+              points: outline,
+            })
+            continue
+          }
 
           if (currentWidth === null) {
             currentWidth = ri.width

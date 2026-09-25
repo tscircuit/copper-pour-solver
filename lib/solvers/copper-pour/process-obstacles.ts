@@ -202,7 +202,7 @@ export const processObstaclesForPour = (
     }
 
     if (isPolygonPad(pad)) {
-      const margin = getMargin(padMargin)
+      const margin = getMargin(pad.isTrace ? traceMargin : padMargin)
 
       const seen = new Set<string>()
       const uniquePoints = pad.points.filter((p) => {

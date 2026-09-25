@@ -3,3 +3,5 @@ export { initializeManifoldGeometry } from "./solvers/copper-pour/manifold-runti
 export type { ConvertCircuitJsonToInputProblemOptions } from "./circuit-json/ConvertCircuitJsonToInputProblemOptions"
 export * from "./circuit-json/convert-circuit-json-to-input-problem"
 export * from "./types"
+
+export * from "./get-tapered-trace-geometry"

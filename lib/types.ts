@@ -83,6 +83,8 @@ export interface InputTracePad extends BaseInputPad {
 }
 
 export interface InputPolygonPad extends BaseInputPad {
+  /** Trace copper uses traceMargin, not padMargin. */
+  isTrace?: boolean
   shape: "polygon"
   points: Point[]
 }
