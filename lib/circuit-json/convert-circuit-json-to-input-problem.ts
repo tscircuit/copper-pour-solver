@@ -301,6 +301,20 @@ export const convertCircuitJsonToInputProblem = (
         })
         continue
       }
+      if (hole.hole_shape === "oval") {
+        pads.push({
+          shape: "oval",
+          padId: hole.pcb_hole_id,
+          layer: options.layer,
+          connectivityKey: `hole:${hole.pcb_hole_id}`,
+          x: hole.x,
+          y: hole.y,
+          width: hole.hole_width,
+          height: hole.hole_height,
+          ccwRotation: 0,
+        })
+        continue
+      }
       if (hole.hole_shape !== "circle") continue
 
       pads.push({
