@@ -27,5 +27,10 @@ export interface ConvertCircuitJsonToInputProblemOptions {
   thermal_relief_spoke_width?: number
   /** Number of evenly spaced thermal relief spokes. Defaults to 4. */
   thermal_relief_spoke_count?: number
+  /**
+   * Removes pour islands that do not touch any copper of the pour's own net
+   * (matching KiCad island_removal_mode 0). Defaults to false.
+   */
+  remove_unconnected_islands?: boolean
   outline?: Point[]
 }

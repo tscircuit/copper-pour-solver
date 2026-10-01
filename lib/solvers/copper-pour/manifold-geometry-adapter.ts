@@ -163,6 +163,37 @@ export const removeTinyIslands = (
   return composeCrossSections(islands)
 }
 
+/**
+ * Drops every island that does not overlap copper of the pour's own net
+ * (pads, vias, traces at their true geometry). KiCad does the same under
+ * `island_removal_mode 0`; without it the solver emits floating copper that
+ * fabrication never produces.
+ */
+export const removeUnconnectedIslands = (
+  section: CrossSection,
+  anchorPolygons: PolygonRing[],
+  minOverlapArea = DEFAULT_MIN_ISLAND_AREA,
+): CrossSection => {
+  if (section.isEmpty()) return section
+  if (anchorPolygons.length === 0) return emptyCrossSection()
+
+  const anchorSection = crossSectionFromPolygons(anchorPolygons)
+  if (anchorSection.isEmpty()) return emptyCrossSection()
+
+  const minScaledOverlap =
+    minOverlapArea * MANIFOLD_GEOMETRY_SCALE * MANIFOLD_GEOMETRY_SCALE
+  const islands = section.decompose().filter((island) => {
+    const overlap = runManifoldOperation(
+      "removeUnconnectedIslands.intersect",
+      [...island.toPolygons(), ...anchorSection.toPolygons()],
+      () => island.intersect(anchorSection),
+    )
+    return !overlap.isEmpty() && overlap.area() > minScaledOverlap
+  })
+
+  return composeCrossSections(islands)
+}
+
 export const crossSectionToCopperPourIslands = (
   section: CrossSection,
 ): CopperPourIsland[] => {

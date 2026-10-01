@@ -7,10 +7,12 @@ import {
   crossSectionToCopperPourIslands,
   offsetCrossSection,
   removeTinyIslands,
+  removeUnconnectedIslands,
   subtractCrossSectionBlockers,
   subtractBlockersFromPour,
 } from "./copper-pour/manifold-geometry-adapter"
 import { isManifoldGeometryInitialized } from "./copper-pour/manifold-runtime"
+import { padToCopperPolygons } from "./copper-pour/pad-anchor-polygons"
 import { processObstaclesForPour } from "./copper-pour/process-obstacles"
 
 export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
@@ -87,12 +89,21 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
         boardPolygon,
         polygonsToSubtract,
       )
-      const finalPour = removeTinyIslands(
-        subtractCrossSectionBlockers(
-          pourWithoutComponentObstacles,
-          higherPriorityPourBlockers,
-        ),
+      const pourWithoutHigherPriorityBlockers = subtractCrossSectionBlockers(
+        pourWithoutComponentObstacles,
+        higherPriorityPourBlockers,
       )
+
+      const connectedPour =
+        region.remove_unconnected_islands === true
+          ? removeUnconnectedIslands(
+              pourWithoutHigherPriorityBlockers,
+              padsForLayer
+                .filter((pad) => pad.connectivityKey === region.connectivityKey)
+                .flatMap((pad) => padToCopperPolygons(pad)),
+            )
+          : pourWithoutHigherPriorityBlockers
+      const finalPour = removeTinyIslands(connectedPour)
       const pourIslands = crossSectionToCopperPourIslands(finalPour)
 
       brep_shapes_by_region[regionIndex] = generateBRep(pourIslands)
