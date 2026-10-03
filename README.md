@@ -56,6 +56,24 @@ required for pour-to-pour clearance because the solver must see every region in
 the same input problem. Array order is the priority order: later pours take
 priority over earlier pours.
 
+## Crosshatched Copper
+
+Set `crosshatch: true` on a converter options object or an `InputPourRegion` to
+generate a 45-degree mesh with 0.25 mm copper width and 1 mm center-to-center
+pitch. Omission or `false` keeps solid fill. The mesh is anchored at board-world
+(0, 0), in millimetres (+X right, +Y up), so neighboring regions share a grid.
+
+Only complete 0.75 mm square openings are removed. Openings remain at least
+0.25 mm from every existing copper boundary and same-net pad, via or trace.
+This leaves a solid rim, preserves thermal spokes and narrow necks, and does
+not create new disconnected islands. Small regions can therefore remain solid.
+Existing disconnected islands retain the ordinary solid-pour behavior.
+
+Clearances and pour priority are resolved before hatching. Higher-priority
+crosshatched regions reserve their openings against lower-priority different-net
+pours. Output remains ordinary B-Rep geometry with inner rings; renderers and
+fabrication exporters should consume those rings rather than regenerate a grid.
+
 ## Selecting The Pour Net
 
 Prefer selecting by source net name or id:

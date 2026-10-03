@@ -523,6 +523,7 @@ export const convertCircuitJsonToInputProblem = (
       boardEdgeOutline: options.board_edge_outline,
       outline,
       connectivityKey: pourConnectivityKey,
+      crosshatch: options.crosshatch,
       padMargin: options.pad_margin,
       traceMargin: options.trace_margin,
       pourMargin:

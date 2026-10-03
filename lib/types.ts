@@ -12,6 +12,8 @@ export interface InputPourRegion {
   boardEdgeOutline?: Point[]
   outline?: Point[]
   connectivityKey: string
+  /** Use a 45-degree mesh with 0.25mm copper width and 1mm pitch. */
+  crosshatch?: boolean
   padMargin: number
   traceMargin: number
   /** Clearance from higher-priority, different-net pour regions. */

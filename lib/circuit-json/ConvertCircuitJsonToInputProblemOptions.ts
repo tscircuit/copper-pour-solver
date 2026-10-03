@@ -2,6 +2,8 @@ import type { LayerRef, Point } from "circuit-json"
 
 export interface ConvertCircuitJsonToInputProblemOptions {
   layer: LayerRef
+  /** Use a 45-degree mesh with 0.25mm copper width and 1mm pitch. */
+  crosshatch?: boolean
   subcircuit_id?: string
   source_net_id?: string
   source_net_name?: string
