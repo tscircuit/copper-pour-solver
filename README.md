@@ -63,11 +63,19 @@ generate a 45-degree mesh with 0.25 mm copper width and 1 mm center-to-center
 pitch. Omission or `false` keeps solid fill. The mesh is anchored at board-world
 (0, 0), in millimetres (+X right, +Y up), so neighboring regions share a grid.
 
-Only complete 0.75 mm square openings are removed. Openings remain at least
-0.25 mm from every existing copper boundary and same-net pad, via or trace.
-This leaves a solid rim, preserves thermal spokes and narrow necks, and does
-not create new disconnected islands. Small regions can therefore remain solid.
-Existing disconnected islands retain the ordinary solid-pour behavior.
+The 0.75 mm square openings are clipped at pour edges, retaining triangles,
+trapezoids and other partial cells behind a 0.25 mm solid copper rim. Board-edge
+clearance is applied before this rim. Each connected opening fragment is removed
+only if its area is at least 0.0625 mm² and a 0.125 mm inward offset leaves a
+nonempty interior; smaller fragments and long thin slivers remain solid copper.
+These fixed filters are tied to the mesh width, not a manufacturer-specific DRC.
+
+Cells intersecting protected same-net pads/vias/traces or obstacle clearances
+(including thermal reliefs, holes, keepouts and higher-priority pours) are still
+omitted entirely, with 0.25 mm additional separation. This preserves connections
+and avoids isolating copper around an obstacle inside a cell. Narrow regions
+can remain solid; existing disconnected islands retain ordinary solid-pour
+behavior.
 
 Clearances and pour priority are resolved before hatching. Higher-priority
 crosshatched regions reserve their openings against lower-priority different-net

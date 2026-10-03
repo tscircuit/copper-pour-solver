@@ -77,7 +77,12 @@ test("crosshatch produces 45-degree holes with 1mm pitch and preserves solid-fil
   expect(contains(hatched, 0, Math.SQRT1_2)).toBe(false)
   expect(contains(hatched, 0, 0)).toBe(true)
   expect(contains(hatched, Math.SQRT1_2, Math.SQRT2)).toBe(false)
-  for (const ring of hatched[0]!.inner_rings) {
+  const fullSquares = hatched[0]!.inner_rings.filter(
+    (ring) => Math.abs(ringArea(ring.vertices) - 0.75 ** 2) < 1e-5,
+  )
+  expect(fullSquares.length).toBeGreaterThan(20)
+  expect(fullSquares.length).toBeLessThan(hatched[0]!.inner_rings.length)
+  for (const ring of fullSquares) {
     expect(ringArea(ring.vertices)).toBeCloseTo(0.75 ** 2, 5)
     const [a, b] = ring.vertices
     expect(Math.abs(a!.x - b!.x)).toBeCloseTo(Math.abs(a!.y - b!.y), 5)
@@ -310,16 +315,18 @@ test("offset and neighboring regions share the board-anchored mesh", () => {
   expect(narrow[0]!.inner_rings.length).toBeGreaterThan(10)
   const centers = (shapes: BRepShape[]) =>
     shapes.flatMap((shape) =>
-      shape.inner_rings.map((ring) => {
-        const center = ring.vertices.reduce(
-          (sum, p) => ({
-            x: sum.x + p.x / ring.vertices.length,
-            y: sum.y + p.y / ring.vertices.length,
-          }),
-          { x: 0, y: 0 },
-        )
-        return `${center.x.toFixed(5)},${center.y.toFixed(5)}`
-      }),
+      shape.inner_rings
+        .filter((ring) => Math.abs(ringArea(ring.vertices) - 0.75 ** 2) < 1e-5)
+        .map((ring) => {
+          const center = ring.vertices.reduce(
+            (sum, p) => ({
+              x: sum.x + p.x / ring.vertices.length,
+              y: sum.y + p.y / ring.vertices.length,
+            }),
+            { x: 0, y: 0 },
+          )
+          return `${center.x.toFixed(5)},${center.y.toFixed(5)}`
+        }),
     )
   const broadCenters = new Set(centers(broad))
   expect(centers(narrow).every((center) => broadCenters.has(center))).toBe(true)
@@ -331,7 +338,7 @@ test("offset and neighboring regions share the board-anchored mesh", () => {
   ).toEqual(broad)
 })
 
-test("small or fully blocked regions do not create partial openings", () => {
+test("small or fully blocked regions do not create tiny openings", () => {
   const options = {
     bounds: { minX: 0, maxX: 0.8, minY: 0, maxY: 0.8 },
     board_edge_margin: 0,
@@ -348,4 +355,168 @@ test("small or fully blocked regions do not create partial openings", () => {
       },
     ]),
   ).toHaveLength(0)
+})
+
+test("clipped edge openings retain the 0.25mm rim after board-edge clearance", () => {
+  // Exercise both rectangular bounds and an explicit outline: board-edge margin
+  // is applied by different code paths, but neither should reject edge cells.
+  const outline = [
+    { x: -5, y: -4 },
+    { x: 5, y: -4 },
+    { x: 5, y: 4 },
+    { x: -5, y: 4 },
+  ]
+  for (const options of [{}, { outline }]) {
+    const hatched = solve({ ...options, crosshatch: true })
+    const holes = hatched[0]!.inner_rings
+    expect(holes.some((ring) => ringArea(ring.vertices) < 0.5)).toBe(true)
+    for (const ring of holes) {
+      expect(ringArea(ring.vertices)).toBeGreaterThanOrEqual(0.0625)
+      for (const vertex of ring.vertices) {
+        expect(Math.abs(vertex.x)).toBeLessThanOrEqual(5 - 0.2 - 0.25 + 1e-6)
+        expect(Math.abs(vertex.y)).toBeLessThanOrEqual(4 - 0.2 - 0.25 + 1e-6)
+      }
+    }
+    // A partial opening reaches the inset edge rather than leaving a whole-cell
+    // solid band. The copper rim immediately outside it remains intact.
+    const rightEdgeHole = holes.find((ring) =>
+      ring.vertices.some((p) => Math.abs(p.x - 4.55) < 1e-6),
+    )!
+    expect(rightEdgeHole).toBeDefined()
+    const edgeY =
+      rightEdgeHole.vertices
+        .filter((p) => Math.abs(p.x - 4.55) < 1e-6)
+        .reduce((sum, p) => sum + p.y, 0) / 2
+    expect(contains(hatched, 4.54, edgeY)).toBe(false)
+    expect(contains(hatched, 4.6, edgeY)).toBe(true)
+  }
+})
+
+test("tiny and long thin clipped remnants are omitted while useful partial openings survive", () => {
+  // Board rectangles are aligned with the 45-degree hatch axes. Removing the
+  // 0.25mm rim leaves the requested rectangle inside one known grid opening.
+  for (const [width, height, retained] of [
+    [0.2, 0.2, false],
+    [0.75, 0.1, false], // Area 0.075mm² passes the area threshold, but is a sliver.
+    [0.75, 0.3, true],
+  ] as const) {
+    const outline = [
+      [-0.125, -0.125],
+      [0.375 + width, -0.125],
+      [0.375 + width, 0.375 + height],
+      [-0.125, 0.375 + height],
+    ].map(([u, v]) => ({
+      x: (u! - v!) * Math.SQRT1_2,
+      y: (u! + v!) * Math.SQRT1_2,
+    }))
+    const options = { outline, board_edge_margin: 0 }
+    const solid = solve(options)
+    const hatched = solve({ ...options, crosshatch: true })
+    expect(hatched).toHaveLength(1)
+    if (retained) {
+      expect(hatched[0]!.inner_rings).toHaveLength(1)
+      expect(copperArea(solid) - copperArea(hatched)).toBeCloseTo(
+        width * height,
+        5,
+      )
+    } else {
+      expect(hatched).toEqual(solid)
+    }
+  }
+})
+
+test("clipped squares follow concave and slanted edges while preserving the copper component", async () => {
+  const outline = [
+    { x: -5, y: -4 },
+    { x: 5, y: -4 },
+    { x: 5, y: 1 },
+    { x: 2, y: 1 },
+    { x: 2, y: 4 },
+    { x: -5, y: 2 },
+  ]
+  const hatched = solve({ crosshatch: true, outline })
+  expect(hatched).toHaveLength(1)
+  expect(
+    hatched[0]!.inner_rings.filter((ring) => ringArea(ring.vertices) < 0.55)
+      .length,
+  ).toBeGreaterThan(5)
+  const svg = convertCircuitJsonToPcbSvg([
+    {
+      type: "pcb_board",
+      pcb_board_id: "board",
+      center: { x: 0, y: 0 },
+      width: 10,
+      height: 8,
+      thickness: 1.6,
+      num_layers: 2,
+      material: "fr4",
+      outline,
+    },
+    {
+      type: "pcb_copper_pour",
+      pcb_copper_pour_id: "pour",
+      shape: "brep",
+      layer: "top",
+      covered_with_solder_mask: true,
+      brep_shape: hatched[0]!,
+    },
+    {
+      type: "pcb_note_text",
+      pcb_note_text_id: "label",
+      text: "CLIPPED EDGES / 0.25mm SOLID RIM",
+      font_size: 0.3,
+      font: "tscircuit2024",
+      layer: "top",
+      anchor_position: { x: 0, y: -4.5 },
+      anchor_alignment: "center",
+    },
+  ])
+  await expect(svg).toMatchSvgSnapshot(
+    import.meta.path,
+    "crosshatch-clipped-outline",
+  )
+})
+
+test("a same-net pad inside a clipped boundary cell stays connected", () => {
+  const options = { crosshatch: true }
+  const before = solve(options)
+  const edgeHole = before[0]!.inner_rings.find((ring) =>
+    ring.vertices.some((p) => Math.abs(p.x - 4.55) < 1e-6),
+  )!
+  const center = edgeHole.vertices.reduce(
+    (sum, p) => ({
+      x: sum.x + p.x / edgeHole.vertices.length,
+      y: sum.y + p.y / edgeHole.vertices.length,
+    }),
+    { x: 0, y: 0 },
+  )
+  expect(contains(before, center.x, center.y)).toBe(false)
+  const after = solve(options, [
+    {
+      shape: "circle",
+      padId: "edge-via",
+      layer: "top",
+      connectivityKey: "net:GND",
+      ...center,
+      radius: 0.03,
+    },
+  ])
+  expect(after).toHaveLength(1)
+  expect(contains(after, center.x, center.y)).toBe(true)
+  expect(after[0]!.inner_rings.length).toBeLessThan(
+    before[0]!.inner_rings.length,
+  )
+})
+
+test("large boards filter thousands of clipped cells without exhausting WASM memory", () => {
+  const hatched = solve({
+    crosshatch: true,
+    bounds: { minX: -50, maxX: 50, minY: -50, maxY: 50 },
+    board_edge_margin: 0,
+  })
+  expect(hatched).toHaveLength(1)
+  expect(hatched[0]!.inner_rings.length).toBeGreaterThan(9_000)
+  expect(
+    hatched[0]!.inner_rings.every((ring) => ringArea(ring.vertices) >= 0.0625),
+  ).toBe(true)
 })

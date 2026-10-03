@@ -54,7 +54,7 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
         (p) => p.layer === region.layer,
       )
 
-      const { polygonsToSubtract } = processObstaclesForPour(
+      const { polygonsToSubtract, obstaclePolygons } = processObstaclesForPour(
         padsForLayer,
         region.connectivityKey,
         {
@@ -95,7 +95,13 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
         ),
       )
       const finalPour = region.crosshatch
-        ? applyCrosshatch(solidPour, padsForLayer, region.connectivityKey)
+        ? applyCrosshatch({
+            solidPour,
+            padsForLayer,
+            connectivityKey: region.connectivityKey,
+            obstaclePolygons,
+            higherPriorityPourBlockers,
+          })
         : solidPour
       const pourIslands = crossSectionToCopperPourIslands(finalPour)
 
