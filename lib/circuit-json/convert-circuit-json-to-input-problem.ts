@@ -363,6 +363,8 @@ export const convertCircuitJsonToInputProblem = (
     } else if (elm.type === "pcb_keepout") {
       const keepout = elm as PCBKeepout
       if (!keepout.layers.includes(options.layer)) continue
+      // Advisory keepouts only produce DRC warnings and never block copper
+      if (keepout.warning_only) continue
 
       if (keepout.shape === "rect") {
         pads.push({
