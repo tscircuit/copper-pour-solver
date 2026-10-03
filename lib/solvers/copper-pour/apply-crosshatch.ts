@@ -15,27 +15,26 @@ import {
 } from "./polygon-ring"
 import { processObstaclesForPour } from "./process-obstacles"
 
-const HATCH_PITCH = 1
-const HATCH_WIDTH = 0.25
-const HALF_OPENING = (HATCH_PITCH - HATCH_WIDTH) / 2
-const MIN_OPENING_AREA = HATCH_WIDTH ** 2
-
 // Input positions use Manifold's scaled board-world coordinates.
-const getCellKey = (x: number, y: number) => {
+const getCellKey = (x: number, y: number, hatchPitch: number) => {
   const u = ((x + y) * Math.SQRT1_2) / MANIFOLD_GEOMETRY_SCALE
   const v = ((y - x) * Math.SQRT1_2) / MANIFOLD_GEOMETRY_SCALE
-  return `${Math.floor(u / HATCH_PITCH)},${Math.floor(v / HATCH_PITCH)}`
+  return `${Math.floor(u / hatchPitch)},${Math.floor(v / hatchPitch)}`
 }
 
 // Filter each connected fragment separately: a large fragment must not rescue a
 // tiny sibling produced when a concave edge cuts the same grid cell in two.
-const removeSmallOpenings = (openings: CrossSection): CrossSection => {
+const removeSmallOpenings = (
+  openings: CrossSection,
+  hatchPitch: number,
+  hatchWidth: number,
+): CrossSection => {
   // Decomposing thousands of disconnected openings at once can exhaust WASM
   // memory. Each contour stays in one grid cell, so decompose one cell at a time.
   const cells = new Map<string, ScaledPolygons>()
   for (const polygon of openings.toPolygons()) {
     const [x, y] = polygon[0]!
-    const key = getCellKey(x, y)
+    const key = getCellKey(x, y, hatchPitch)
     const contours = cells.get(key) ?? []
     contours.push(polygon)
     cells.set(key, contours)
@@ -46,10 +45,10 @@ const removeSmallOpenings = (openings: CrossSection): CrossSection => {
     const fragments = cell.decompose()
     try {
       for (const fragment of fragments) {
-        if (fragment.area() < MIN_OPENING_AREA * MANIFOLD_GEOMETRY_SCALE ** 2)
+        if (fragment.area() < hatchWidth ** 2 * MANIFOLD_GEOMETRY_SCALE ** 2)
           continue
         const inset = fragment.offset(
-          (-HATCH_WIDTH / 2) * MANIFOLD_GEOMETRY_SCALE,
+          (-hatchWidth / 2) * MANIFOLD_GEOMETRY_SCALE,
           "Round",
         )
         try {
@@ -71,32 +70,47 @@ const removeSmallOpenings = (openings: CrossSection): CrossSection => {
 /**
  * Clip square openings at the edges of an already-cleared pour. Positions are
  * board-world mm (+X right, +Y up); the 45-degree grid is anchored at (0, 0).
- * Openings leave a HATCH_WIDTH solid rim. Cells touching protected pad/trace,
+ * Openings leave a hatchWidth solid rim. Cells touching protected pad/trace,
  * thermal, hole, keepout or higher-priority pour clearances are omitted entirely.
  * Partial openings are allowed only at pour edges; tiny fragments are discarded.
  */
 export const applyCrosshatch = ({
   solidPour,
+  hatchPitch = 1,
+  hatchWidth = 0.25,
   padsForLayer,
   connectivityKey,
   obstaclePolygons,
   higherPriorityPourBlockers,
 }: {
   solidPour: CrossSection
+  hatchPitch?: number
+  hatchWidth?: number
   padsForLayer: InputPad[]
   connectivityKey: string
   obstaclePolygons: PolygonRing[]
   higherPriorityPourBlockers: CrossSection[]
 }): CrossSection => {
+  if (!Number.isFinite(hatchPitch) || hatchPitch <= 0)
+    throw new Error("crosshatchPitch must be a finite positive distance in mm")
+  if (
+    !Number.isFinite(hatchWidth) ||
+    hatchWidth <= 0 ||
+    hatchWidth >= hatchPitch
+  )
+    throw new Error(
+      "crosshatchWidth must be positive and less than crosshatchPitch",
+    )
+  const halfOpening = (hatchPitch - hatchWidth) / 2
   if (solidPour.isEmpty()) return solidPour
 
   const polygons = solidPour.toPolygons()
   return runManifoldOperation("applyCrosshatch", polygons, () => {
-    const interior = solidPour.offset(-HATCH_WIDTH * MANIFOLD_GEOMETRY_SCALE)
+    const interior = solidPour.offset(-hatchWidth * MANIFOLD_GEOMETRY_SCALE)
     const { polygonsToSubtract } = processObstaclesForPour(
       padsForLayer.filter((pad) => pad.connectivityKey === connectivityKey),
       undefined,
-      { padMargin: HATCH_WIDTH, traceMargin: HATCH_WIDTH },
+      { padMargin: hatchWidth, traceMargin: hatchWidth },
     )
     const protectedCopper = crossSectionFromPolygons(polygonsToSubtract)
     const obstacleClearances = crossSectionFromPolygons(obstaclePolygons)
@@ -105,7 +119,7 @@ export const applyCrosshatch = ({
       ...higherPriorityPourBlockers,
     ])
     const expandedClearances = allClearances.offset(
-      HATCH_WIDTH * MANIFOLD_GEOMETRY_SCALE,
+      hatchWidth * MANIFOLD_GEOMETRY_SCALE,
       "Round",
     )
     const protectedAreas = protectedCopper.add(expandedClearances)
@@ -132,26 +146,32 @@ export const applyCrosshatch = ({
         }
       }
 
-      const openings: Array<{ key: string; ring: PolygonRing }> = []
-      for (
-        let i = Math.floor(minU / HATCH_PITCH);
-        i <= Math.floor(maxU / HATCH_PITCH);
-        i++
+      const minI = Math.floor(minU / hatchPitch)
+      const maxI = Math.floor(maxU / hatchPitch)
+      const minJ = Math.floor(minV / hatchPitch)
+      const maxJ = Math.floor(maxV / hatchPitch)
+      // Bound work before allocating cells, including pitches too small for
+      // integer grid indices to advance safely at the board's coordinates.
+      if (
+        ![minI, maxI, minJ, maxJ].every(Number.isSafeInteger) ||
+        (maxI - minI + 1) * (maxJ - minJ + 1) > 1_000_000
       ) {
-        for (
-          let j = Math.floor(minV / HATCH_PITCH);
-          j <= Math.floor(maxV / HATCH_PITCH);
-          j++
-        ) {
-          const u = (i + 0.5) * HATCH_PITCH
-          const v = (j + 0.5) * HATCH_PITCH
+        throw new Error(
+          "Crosshatch exceeds 1,000,000 candidate cells; increase crosshatchPitch or reduce the pour area",
+        )
+      }
+      const openings: Array<{ key: string; ring: PolygonRing }> = []
+      for (let i = minI; i <= maxI; i++) {
+        for (let j = minJ; j <= maxJ; j++) {
+          const u = (i + 0.5) * hatchPitch
+          const v = (j + 0.5) * hatchPitch
           openings.push({
             key: `${i},${j}`,
             ring: [
-              [u - HALF_OPENING, v - HALF_OPENING],
-              [u + HALF_OPENING, v - HALF_OPENING],
-              [u + HALF_OPENING, v + HALF_OPENING],
-              [u - HALF_OPENING, v + HALF_OPENING],
+              [u - halfOpening, v - halfOpening],
+              [u + halfOpening, v - halfOpening],
+              [u + halfOpening, v + halfOpening],
+              [u - halfOpening, v + halfOpening],
             ].map(([u, v]) => ({
               x: (u! - v!) * Math.SQRT1_2,
               y: (u! + v!) * Math.SQRT1_2,
@@ -170,7 +190,7 @@ export const applyCrosshatch = ({
       const rejectedCells = new Set<string>()
       for (const polygon of conflicts.toPolygons()) {
         const [x, y] = polygon[0]!
-        rejectedCells.add(getCellKey(x, y))
+        rejectedCells.add(getCellKey(x, y, hatchPitch))
       }
       conflicts.delete()
 
@@ -181,7 +201,11 @@ export const applyCrosshatch = ({
       )
       const clippedOpenings = acceptedOpenings.intersect(interior)
       acceptedOpenings.delete()
-      const filteredOpenings = removeSmallOpenings(clippedOpenings)
+      const filteredOpenings = removeSmallOpenings(
+        clippedOpenings,
+        hatchPitch,
+        hatchWidth,
+      )
       clippedOpenings.delete()
       try {
         return solidPour.subtract(filteredOpenings)

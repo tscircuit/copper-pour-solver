@@ -12,8 +12,12 @@ export interface InputPourRegion {
   boardEdgeOutline?: Point[]
   outline?: Point[]
   connectivityKey: string
-  /** Use a 45-degree mesh with 0.25mm copper width and 1mm pitch. */
+  /** Use a 45-degree mesh; defaults to 0.25mm copper width and 1mm pitch. */
   crosshatch?: boolean
+  /** Repeat spacing perpendicular to the strips, in mm. Defaults to 1. */
+  crosshatchPitch?: number
+  /** Copper strip and rim width in mm. Defaults to 0.25; must be less than pitch. */
+  crosshatchWidth?: number
   padMargin: number
   traceMargin: number
   /** Clearance from higher-priority, different-net pour regions. */
