@@ -24,6 +24,8 @@ import { normalizeRing, type PolygonRing } from "./polygon-ring"
 
 interface ProcessedObstacles {
   polygonsToSubtract: PolygonRing[]
+  /** Pad/trace/hole/keepout/thermal clearances, excluding board-edge margins. */
+  obstaclePolygons: PolygonRing[]
 }
 
 const isRectPad = (pad: InputPad): pad is InputRectPad => pad.shape === "rect"
@@ -116,6 +118,7 @@ export const processObstaclesForPour = (
     }
   }
 
+  const boardEdgePolygonCount = polygonsToSubtract.length
   for (const pad of pads) {
     const isOnNet = pad.connectivityKey === pourConnectivityKey
 
@@ -269,5 +272,8 @@ export const processObstaclesForPour = (
     }
   }
 
-  return { polygonsToSubtract }
+  return {
+    polygonsToSubtract,
+    obstaclePolygons: polygonsToSubtract.slice(boardEdgePolygonCount),
+  }
 }
