@@ -65,6 +65,85 @@ const contains = (shapes: BRepShape[], x: number, y: number) =>
       !shape.inner_rings.some((ring) => insideRing(x, y, ring)),
   )
 
+test("custom hatch sizes control opening dimensions, spacing, rim and fragment filtering", () => {
+  expect(
+    solve({ crosshatch: true, crosshatchPitch: 1, crosshatchWidth: 0.25 }),
+  ).toEqual(solve({ crosshatch: true }))
+  for (const sizing of [
+    { crosshatchPitch: 2, crosshatchWidth: 0.4 },
+    { crosshatchPitch: 1.5 },
+    { crosshatchWidth: 0.35 },
+  ]) {
+    const pitch = sizing.crosshatchPitch ?? 1
+    const width = sizing.crosshatchWidth ?? 0.25
+    const shapes = solve({ crosshatch: true, ...sizing })
+    const rings = shapes.flatMap((shape) => shape.inner_rings)
+    const fullSquares = rings.filter(
+      (ring) => Math.abs(ringArea(ring.vertices) - (pitch - width) ** 2) < 1e-5,
+    )
+    expect(fullSquares.length).toBeGreaterThan(4)
+    expect(contains(shapes, 0, pitch * Math.SQRT1_2)).toBe(false)
+    expect(contains(shapes, 0, 0)).toBe(true)
+    for (const ring of rings) {
+      expect(ringArea(ring.vertices)).toBeGreaterThanOrEqual(width ** 2 - 1e-6)
+      for (const p of ring.vertices) {
+        expect(Math.abs(p.x)).toBeLessThanOrEqual(5 - 0.2 - width + 1e-6)
+        expect(Math.abs(p.y)).toBeLessThanOrEqual(4 - 0.2 - width + 1e-6)
+      }
+    }
+    // At least one cell is clipped rather than omitted at the custom rim.
+    expect(
+      rings.some((ring) =>
+        ring.vertices.some(
+          (p) =>
+            Math.abs(Math.abs(p.x) - (5 - 0.2 - width)) < 1e-6 ||
+            Math.abs(Math.abs(p.y) - (4 - 0.2 - width)) < 1e-6,
+        ),
+      ),
+    ).toBe(true)
+    for (const ring of fullSquares) {
+      const center = ring.vertices.reduce(
+        (sum, p) => ({
+          x: sum.x + p.x / 4,
+          y: sum.y + p.y / 4,
+        }),
+        { x: 0, y: 0 },
+      )
+      for (const coordinate of [
+        (center.x + center.y) * Math.SQRT1_2,
+        (center.y - center.x) * Math.SQRT1_2,
+      ]) {
+        const cell = coordinate / pitch - 0.5
+        expect(cell).toBeCloseTo(Math.round(cell), 5)
+      }
+    }
+  }
+})
+
+test("invalid hatch sizes fail early and sizing does not enable solid pours", () => {
+  for (const sizing of [
+    { crosshatchPitch: 0 },
+    { crosshatchPitch: -1 },
+    { crosshatchPitch: Infinity },
+    { crosshatchPitch: NaN },
+    { crosshatchWidth: 0 },
+    { crosshatchWidth: -1 },
+    { crosshatchWidth: Infinity },
+    { crosshatchWidth: NaN },
+    { crosshatchPitch: 0.2 },
+    { crosshatchWidth: 1 },
+    { crosshatchPitch: 2, crosshatchWidth: 2 },
+  ]) {
+    expect(() => solve({ crosshatch: true, ...sizing })).toThrow(/crosshatch/)
+  }
+  expect(() =>
+    solve({ crosshatch: true, crosshatchPitch: 1e-10, crosshatchWidth: 1e-11 }),
+  ).toThrow(/candidate cells/)
+  const sizing = { crosshatchPitch: 2, crosshatchWidth: 0.4 }
+  expect(solve(sizing)).toEqual(solve())
+  expect(solve({ ...sizing, crosshatch: false })).toEqual(solve())
+})
+
 test("crosshatch produces 45-degree holes with 1mm pitch and preserves solid-fill defaults", async () => {
   const solid = solve()
   expect(solve({ crosshatch: false })).toEqual(solid)
@@ -287,6 +366,8 @@ test("converter forwards crosshatch independently for each region", () => {
         pad_margin: 0.2,
         trace_margin: 0.2,
         crosshatch: true,
+        crosshatchPitch: 2,
+        crosshatchWidth: 0.4,
       },
       {
         layer: "bottom",
@@ -299,7 +380,12 @@ test("converter forwards crosshatch independently for each region", () => {
   const output = new CopperPourPipelineSolver(input).getOutput()
   expect(
     output.brep_shapes_by_region[0]![0]!.inner_rings.length,
-  ).toBeGreaterThan(30)
+  ).toBeGreaterThan(4)
+  expect(
+    output.brep_shapes_by_region[0]![0]!.inner_rings.some(
+      (ring) => Math.abs(ringArea(ring.vertices) - 1.6 ** 2) < 1e-5,
+    ),
+  ).toBe(true)
   expect(output.brep_shapes_by_region[1]![0]!.inner_rings).toHaveLength(0)
 })
 

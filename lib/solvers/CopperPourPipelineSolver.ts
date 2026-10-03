@@ -97,6 +97,8 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
       const finalPour = region.crosshatch
         ? applyCrosshatch({
             solidPour,
+            hatchPitch: region.crosshatchPitch,
+            hatchWidth: region.crosshatchWidth,
             padsForLayer,
             connectivityKey: region.connectivityKey,
             obstaclePolygons,

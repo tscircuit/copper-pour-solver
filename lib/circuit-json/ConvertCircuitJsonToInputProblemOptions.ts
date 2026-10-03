@@ -2,8 +2,12 @@ import type { LayerRef, Point } from "circuit-json"
 
 export interface ConvertCircuitJsonToInputProblemOptions {
   layer: LayerRef
-  /** Use a 45-degree mesh with 0.25mm copper width and 1mm pitch. */
+  /** Use a 45-degree mesh; defaults to 0.25mm copper width and 1mm pitch. */
   crosshatch?: boolean
+  /** Repeat spacing perpendicular to the strips, in mm. Defaults to 1. */
+  crosshatchPitch?: number
+  /** Copper strip and rim width in mm. Defaults to 0.25; must be less than pitch. */
+  crosshatchWidth?: number
   subcircuit_id?: string
   source_net_id?: string
   source_net_name?: string

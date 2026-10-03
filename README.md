@@ -60,19 +60,27 @@ priority over earlier pours.
 
 Set `crosshatch: true` on a converter options object or an `InputPourRegion` to
 generate a 45-degree mesh with 0.25 mm copper width and 1 mm center-to-center
-pitch. Omission or `false` keeps solid fill. The mesh is anchored at board-world
-(0, 0), in millimetres (+X right, +Y up), so neighboring regions share a grid.
+pitch by default. Set `crosshatchPitch` and `crosshatchWidth` in millimetres to
+customize the mesh, for example `{ crosshatch: true, crosshatchPitch: 2,
+crosshatchWidth: 0.4 }`. Both must be finite and positive, with width less than
+pitch. Omission or `false` keeps solid fill regardless of sizing options. The
+mesh is anchored at board-world (0, 0), in millimetres (+X right, +Y up), so
+neighboring regions with the same pitch share a grid.
 
-The 0.75 mm square openings are clipped at pour edges, retaining triangles,
-trapezoids and other partial cells behind a 0.25 mm solid copper rim. Board-edge
-clearance is applied before this rim. Each connected opening fragment is removed
-only if its area is at least 0.0625 mm² and a 0.125 mm inward offset leaves a
-nonempty interior; smaller fragments and long thin slivers remain solid copper.
-These fixed filters are tied to the mesh width, not a manufacturer-specific DRC.
+Square openings have side length `crosshatchPitch - crosshatchWidth` and are
+clipped at pour edges, retaining triangles, trapezoids and other partial cells
+behind a `crosshatchWidth` solid copper rim. Board-edge clearance is applied
+before this rim. Each connected opening fragment is removed only if its area is
+at least `crosshatchWidth²` and an inward offset of `crosshatchWidth / 2` leaves
+a nonempty interior; smaller fragments and long thin slivers remain solid
+copper. These filters scale with the mesh width, not a manufacturer-specific DRC.
+The defaults retain the previous 0.75 mm openings, 0.25 mm rim, 0.0625 mm²
+minimum area and 0.125 mm inset. A request exceeding 1,000,000 candidate grid
+cells fails with an error asking for a larger pitch or smaller pour area.
 
 Cells intersecting protected same-net pads/vias/traces or obstacle clearances
 (including thermal reliefs, holes, keepouts and higher-priority pours) are still
-omitted entirely, with 0.25 mm additional separation. This preserves connections
+omitted entirely, with `crosshatchWidth` additional separation. This preserves connections
 and avoids isolating copper around an obstacle inside a cell. Narrow regions
 can remain solid; existing disconnected islands retain ordinary solid-pour
 behavior.
