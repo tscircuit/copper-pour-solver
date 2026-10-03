@@ -63,7 +63,9 @@ const removeSmallOpenings = (openings: CrossSection): CrossSection => {
       cell.delete()
     }
   }
-  return getCrossSection().ofPolygons(retained, "Positive")
+  return retained.length > 0
+    ? getCrossSection().ofPolygons(retained, "Positive")
+    : getCrossSection().square([0, 0])
 }
 
 /**
