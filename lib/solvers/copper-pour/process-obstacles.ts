@@ -40,7 +40,8 @@ const isPolygonPad = (pad: InputPad): pad is InputPolygonPad =>
 
 export const processObstaclesForPour = (
   pads: InputPad[],
-  pourConnectivityKey: string,
+  // undefined includes every pad, used to protect same-net copper from hatch openings.
+  pourConnectivityKey: string | undefined,
   margins: {
     padMargin: number
     traceMargin: number

@@ -2,6 +2,7 @@ import { BasePipelineSolver } from "@tscircuit/solver-utils"
 import type { BRepShape } from "circuit-json"
 import type { InputProblem, PipelineOutput } from "lib/types"
 import { generateBRep } from "./copper-pour/generate-brep"
+import { applyCrosshatch } from "./copper-pour/apply-crosshatch"
 import { getBoardPolygon } from "./copper-pour/get-board-polygon"
 import {
   crossSectionToCopperPourIslands,
@@ -87,12 +88,15 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
         boardPolygon,
         polygonsToSubtract,
       )
-      const finalPour = removeTinyIslands(
+      const solidPour = removeTinyIslands(
         subtractCrossSectionBlockers(
           pourWithoutComponentObstacles,
           higherPriorityPourBlockers,
         ),
       )
+      const finalPour = region.crosshatch
+        ? applyCrosshatch(solidPour, padsForLayer, region.connectivityKey)
+        : solidPour
       const pourIslands = crossSectionToCopperPourIslands(finalPour)
 
       brep_shapes_by_region[regionIndex] = generateBRep(pourIslands)
@@ -100,7 +104,8 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
         layer: region.layer,
         connectivityKey: region.connectivityKey,
         pourMargin,
-        section: finalPour,
+        // Reserve the solid region so lower-priority nets cannot fill hatch openings.
+        section: solidPour,
       })
     }
 
