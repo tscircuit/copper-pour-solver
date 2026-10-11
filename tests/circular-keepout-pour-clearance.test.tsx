@@ -33,7 +33,7 @@ const measureClearance = async (
   return { minimum, svg }
 }
 
-test.failing("copper stays outside a 0.5 mm circular keepout", async () => {
+test("copper stays outside a 0.5 mm circular keepout", async () => {
   const circuit = new Circuit()
   circuit.add(
     <board width={12} height={12} layers={4} routingDisabled>
@@ -71,14 +71,15 @@ test.failing("copper stays outside a 0.5 mm circular keepout", async () => {
     layer: "inner1",
   })
   const output = new CopperPourPipelineSolver(input).getOutput()
-  const { minimum } = await measureClearance(
+  const { minimum, svg } = await measureClearance(
     output.brep_shapes[0]!.inner_rings![0]!.vertices,
     0.5,
   )
   expect(minimum).toBeGreaterThanOrEqual(0.5 - 1e-6)
+  await expect(svg).toMatchSvgSnapshot(import.meta.path, "circular-keepout-0")
 })
 
-test.failing("copper stays outside a 4 mm circular keepout", async () => {
+test("copper stays outside a 4 mm circular keepout", async () => {
   const circuit = new Circuit()
   circuit.add(
     <board width={12} height={12} layers={4} routingDisabled>
@@ -116,9 +117,10 @@ test.failing("copper stays outside a 4 mm circular keepout", async () => {
     layer: "inner1",
   })
   const output = new CopperPourPipelineSolver(input).getOutput()
-  const { minimum } = await measureClearance(
+  const { minimum, svg } = await measureClearance(
     output.brep_shapes[0]!.inner_rings![0]!.vertices,
     4,
   )
   expect(minimum).toBeGreaterThanOrEqual(4 - 1e-6)
+  await expect(svg).toMatchSvgSnapshot(import.meta.path, "circular-keepout-1")
 })

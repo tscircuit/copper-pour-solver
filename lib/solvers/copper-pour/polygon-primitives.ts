@@ -5,13 +5,17 @@ export const circleToPolygon = (
   center: Point,
   radius: number,
   numSegments = 32,
+  circumscribed = false,
 ): PolygonRing => {
+  const polygonRadius = circumscribed
+    ? radius / Math.cos(Math.PI / numSegments)
+    : radius
   const points: PolygonRing = []
   for (let i = 0; i < numSegments; i++) {
     const angle = (i / numSegments) * 2 * Math.PI
     points.push({
-      x: center.x + radius * Math.cos(angle),
-      y: center.y + radius * Math.sin(angle),
+      x: center.x + polygonRadius * Math.cos(angle),
+      y: center.y + polygonRadius * Math.sin(angle),
     })
   }
   return points
