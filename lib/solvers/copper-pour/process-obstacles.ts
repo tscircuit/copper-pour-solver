@@ -146,7 +146,13 @@ export const processObstaclesForPour = (
     if (isCircularPad(pad)) {
       const margin = getMargin(padMargin)
       polygonsToSubtract.push(
-        circleToPolygon({ x: pad.x, y: pad.y }, pad.radius + margin),
+        // Keepout edges must stay outside the declared circle, not just vertices.
+        circleToPolygon(
+          { x: pad.x, y: pad.y },
+          pad.radius + margin,
+          32,
+          isKeepout,
+        ),
       )
       continue
     }
