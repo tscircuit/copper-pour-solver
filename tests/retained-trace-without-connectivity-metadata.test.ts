@@ -37,9 +37,7 @@ test("retained copper without optional ownership metadata still clears a pour", 
     ].map(({ id, y, width, layer }) => ({
       type: "pcb_trace",
       pcb_trace_id: id,
-      ...(id === "same-net-ground"
-        ? { source_trace_id: "ground-trace" }
-        : {}),
+      ...(id === "same-net-ground" ? { source_trace_id: "ground-trace" } : {}),
       route: [
         { route_type: "wire", x: -3, y, width, layer },
         { route_type: "wire", x: 3, y, width, layer },
@@ -75,9 +73,7 @@ test("retained copper without optional ownership metadata still clears a pour", 
     import.meta.path,
     "retained-trace-without-connectivity-metadata",
   )
-  const retained = input.pads.filter((pad) =>
-    pad.padId.startsWith("retained-"),
-  )
+  const retained = input.pads.filter((pad) => pad.padId.startsWith("retained-"))
   expect(retained).toHaveLength(2)
   expect(new Set(retained.map((pad) => pad.connectivityKey)).size).toBe(2)
   expect(retained.every((pad) => pad.layer === "top")).toBe(true)
