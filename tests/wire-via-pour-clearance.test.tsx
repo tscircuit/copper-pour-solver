@@ -239,6 +239,7 @@ test("pour conversion retains Core-compiled wire-to-via copper and prevents a sh
     expect(
       pads.some(
         (pad) =>
+          pad.shape === "rect" &&
           pad.x === endpoint.x &&
           pad.y === endpoint.y &&
           pad.layer === endpoint.layer,
@@ -324,7 +325,8 @@ test("pour conversion retains Core-compiled wire-to-via copper and prevents a sh
     missingInnerWire.pads.filter((pad) => pad.shape === "trace"),
   ).toHaveLength(0)
   expect(output.brep_shapes).toHaveLength(1)
-  expect(output.brep_shapes[0]!.inner_rings).toHaveLength(1)
+  // The unused R1.1 pad retains its own independent antipad.
+  expect(output.brep_shapes[0]!.inner_rings).toHaveLength(2)
   expect(
     Math.min(
       ...output.brep_shapes[0]!.inner_rings[0]!.vertices.map(
