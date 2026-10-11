@@ -1,34 +1,50 @@
 import { expect, test } from "bun:test"
-import { CopperPourPipelineSolver, type InputProblem } from "lib/index"
+import { Circuit } from "@tscircuit/core"
+import {
+  CopperPourPipelineSolver,
+  convertCircuitJsonToInputProblem,
+} from "lib/index"
 
 test.failing("copper stays outside the entire declared circular keepout", async () => {
   const minima = []
   for (const radius of [0.5, 4]) {
     // Board-world XY points in mm, +X right / +Y up; a translated circular washer.
     const center = { x: 1, y: -1 }
-    const input: InputProblem = {
-      regionsForPour: [
-        {
-          shape: "rect",
-          layer: "inner1",
-          bounds: { minX: -6, minY: -6, maxX: 6, maxY: 6 },
-          connectivityKey: "GND",
-          padMargin: 0,
-          traceMargin: 0,
-          board_edge_margin: 0,
-        },
-      ],
-      pads: [
-        {
-          shape: "circle",
-          padId: "washer",
-          connectivityKey: "keepout:washer",
-          layer: "inner1",
-          ...center,
-          radius,
-        },
-      ],
-    }
+    const circuit = new Circuit()
+    circuit.add(
+      <board width={12} height={12} layers={4} routingDisabled>
+        <net name="GND" isGroundNet />
+        <keepout
+          shape="circle"
+          radius={radius}
+          pcbX={center.x}
+          pcbY={center.y}
+          layers={["inner1"]}
+        />
+      </board>,
+    )
+    await circuit.renderUntilSettled()
+    const circuitJson = circuit.getCircuitJson()
+    expect(circuitJson.find((e) => e.type === "pcb_keepout")).toMatchObject({
+      shape: "circle",
+      center,
+      radius,
+      layers: ["inner1"],
+    })
+    const input = convertCircuitJsonToInputProblem(circuitJson, {
+      layer: "inner1",
+      source_net_name: "GND",
+      pad_margin: 0,
+      trace_margin: 0,
+      board_edge_margin: 0,
+    })
+    expect(input.pads).toHaveLength(1)
+    expect(input.pads[0]).toMatchObject({
+      shape: "circle",
+      ...center,
+      radius,
+      layer: "inner1",
+    })
     const output = new CopperPourPipelineSolver(input).getOutput()
     const ring = output.brep_shapes[0]!.inner_rings![0]!.vertices
     // The distance from the center to every emitted straight cutout edge must
