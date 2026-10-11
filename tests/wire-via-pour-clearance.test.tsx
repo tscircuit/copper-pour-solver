@@ -22,17 +22,14 @@ const Endpoint = ({
   layer?: "top" | "bottom"
   net?: string
 }) => (
-  <testpoint
+  <resistor
     name={name}
-    pcbX={x}
+    resistance="10k"
+    footprint="0603"
+    pcbX={x + (layer === "top" ? -0.825 : 0.825)}
     pcbY={y}
     layer={layer}
-    connections={{ pin1: `net.${net}` }}
-    footprint={
-      <footprint>
-        <smtpad shape="rect" portHints={["pin1"]} width={0.4} height={0.5} />
-      </footprint>
-    }
+    connections={{ pin2: `net.${net}` }}
   />
 )
 
@@ -49,35 +46,53 @@ const WireViaRepro = ({
     <net name="GND" isGroundNet />
     <net name="SIGNAL" />
     <net name="BOTTOM_ONLY" />
-    <Endpoint name="A" x={-3} />
-    <Endpoint name="B" x={3} layer="bottom" />
-    <Endpoint name="C1" x={-3} y={-2.5} layer="bottom" net="BOTTOM_ONLY" />
-    <Endpoint name="C2" x={3} y={-2.5} layer="bottom" net="BOTTOM_ONLY" />
+    <Endpoint name="R1" x={-3} />
+    <Endpoint name="R2" x={3} layer="bottom" />
+    <Endpoint name="R3" x={-3} y={-2.5} layer="bottom" net="BOTTOM_ONLY" />
+    <Endpoint name="R4" x={3} y={-2.5} layer="bottom" net="BOTTOM_ONLY" />
     <trace
-      from=".A > .pin1"
-      to=".B > .pin1"
+      from=".R1 > .pin2"
+      to=".R2 > .pin2"
       thickness={0.4}
       pcbPaths={[
         consecutiveVias
           ? [
-              ".A > .pin1",
-              { x: 2, y: 0, via: true, fromLayer: "top", toLayer: "inner1" },
-              { x: 4, y: 0, via: true, fromLayer: "inner1", toLayer: "bottom" },
-              ".B > .pin1",
+              ".R1 > .pin2",
+              {
+                x: 2.825,
+                y: 0,
+                via: true,
+                fromLayer: "top",
+                toLayer: "inner1",
+              },
+              {
+                x: 4.825,
+                y: 0,
+                via: true,
+                fromLayer: "inner1",
+                toLayer: "bottom",
+              },
+              ".R2 > .pin2",
             ]
           : [
-              ".A > .pin1",
-              { x: 2, y: 0, via: true, fromLayer: "top", toLayer: "bottom" },
-              { x: 4, y: 0 },
-              ".B > .pin1",
+              ".R1 > .pin2",
+              {
+                x: 2.825,
+                y: 0,
+                via: true,
+                fromLayer: "top",
+                toLayer: "bottom",
+              },
+              { x: 4.825, y: 0 },
+              ".R2 > .pin2",
             ],
       ]}
     />
     <trace
-      from=".C1 > .pin1"
-      to=".C2 > .pin1"
+      from=".R3 > .pin2"
+      to=".R4 > .pin2"
       thickness={0.6}
-      pcbPath={[".C1 > .pin1", ".C2 > .pin1"]}
+      pcbPath={[".R3 > .pin2", ".R4 > .pin2"]}
     />
     <copperpour
       layer="top"
@@ -93,14 +108,14 @@ const WireViaRepro = ({
     />
     <pcbnotetext text={status} pcbY={3.6} fontSize={0.32} color="#facc15" />
     <pcbnotetext
-      text="TOP signal: 0.40 mm"
-      pcbX={-3}
+      text="R1.2 (0603) → TOP signal: 0.40 mm"
+      pcbX={-2.8}
       pcbY={1.8}
       fontSize={0.3}
       color="#facc15"
     />
     <pcbnotetext
-      text="BOTTOM signal: 0.40 mm"
+      text="BOTTOM → R2.2 (0603)"
       pcbX={2.5}
       pcbY={1.1}
       fontSize={0.3}
@@ -154,13 +169,13 @@ const compileCircuit = async (status?: string, consecutiveVias = false) => {
 }
 
 const topWireOverlapArea = (shapes: BRepShape[], width: number) => {
-  // Probe the real wire body between the endpoint pad and the via clearance.
+  // Probe the real wire body between the standard 0603 pad clearance and via clearance.
   const wire = crossSectionFromPolygons([
     [
-      { x: -2.5, y: -width / 2 },
-      { x: -1.6, y: -width / 2 },
-      { x: -1.6, y: width / 2 },
-      { x: -2.5, y: width / 2 },
+      { x: -2.4, y: -width / 2 },
+      { x: -1.5, y: -width / 2 },
+      { x: -1.5, y: width / 2 },
+      { x: -2.4, y: width / 2 },
     ],
   ])
   let area = 0
@@ -186,6 +201,20 @@ const topWireOverlapArea = (shapes: BRepShape[], width: number) => {
 
 test("pour conversion retains Core-compiled wire-to-via copper and prevents a short", async () => {
   const circuitJson = await compileCircuit()
+  expect(
+    circuitJson.filter(
+      (element) =>
+        element.type === "source_component" &&
+        element.ftype === "simple_resistor",
+    ),
+  ).toHaveLength(4)
+  const pads = circuitJson.filter((element) => element.type === "pcb_smtpad")
+  expect(pads).toHaveLength(8)
+  expect(
+    pads.every(
+      (pad) => pad.shape === "rect" && pad.width === 0.8 && pad.height === 0.95,
+    ),
+  ).toBeTrue()
   const ground = circuitJson.find(
     (e) => e.type === "source_net" && e.name === "GND",
   )!
@@ -204,6 +233,18 @@ test("pour conversion retains Core-compiled wire-to-via copper and prevents a sh
     { route_type: "wire", x: 1, y: 0, width: 0.4, layer: "bottom" },
     { route_type: "wire", x: 3, y: 0, width: 0.4, layer: "bottom" },
   ])
+  for (const endpoint of [trace.route[0]!, trace.route.at(-1)!]) {
+    if (endpoint.route_type !== "wire")
+      throw new Error("Expected a wire endpoint on a standard footprint pad")
+    expect(
+      pads.some(
+        (pad) =>
+          pad.x === endpoint.x &&
+          pad.y === endpoint.y &&
+          pad.layer === endpoint.layer,
+      ),
+    ).toBeTrue()
+  }
   expect(barrel).toMatchObject({
     type: "pcb_via",
     x: -1,
