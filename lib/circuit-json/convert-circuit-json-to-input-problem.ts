@@ -483,6 +483,27 @@ export const convertCircuitJsonToInputProblem = (
           }
 
           currentSegmentGroup.push(point)
+        } else if (ri.route_type === "via") {
+          if (
+            ri.from_layer === options.layer &&
+            currentSegmentGroup.length > 0
+          ) {
+            const lastPoint =
+              currentSegmentGroup[currentSegmentGroup.length - 1]!
+            if (lastPoint.x !== ri.x || lastPoint.y !== ri.y) {
+              currentSegmentGroup.push({ x: ri.x, y: ri.y })
+            }
+          }
+          commitGroup()
+          if (
+            ri.to_layer === options.layer &&
+            next?.route_type === "wire" &&
+            next.layer === options.layer &&
+            (next.x !== ri.x || next.y !== ri.y)
+          ) {
+            currentSegmentGroup.push({ x: ri.x, y: ri.y })
+            currentWidth = next.width
+          }
         } else {
           commitGroup()
         }
