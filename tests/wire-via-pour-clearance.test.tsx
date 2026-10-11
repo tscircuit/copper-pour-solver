@@ -239,6 +239,7 @@ test("pour conversion retains Core-compiled wire-to-via copper and prevents a sh
     expect(
       pads.some(
         (pad) =>
+          pad.shape === "rect" &&
           pad.x === endpoint.x &&
           pad.y === endpoint.y &&
           pad.layer === endpoint.layer,
