@@ -4,6 +4,9 @@ import {
   CopperPourPipelineSolver,
   convertCircuitJsonToInputProblem,
 } from "lib/index"
+import type { CircuitJson } from "circuit-json"
+import { renderPcbLayers } from "./fixtures/render-pcb-layers"
+import { runSolverAndRenderToSvg } from "./utils/run-solver-and-render-to-svg"
 
 const measureClearance = async (
   ring: { x: number; y: number }[],
@@ -33,6 +36,51 @@ const measureClearance = async (
   return { minimum, svg }
 }
 
+async function checkClearance(
+  circuitJson: CircuitJson,
+  radius: number,
+  snapshotName: string,
+) {
+  const input = convertCircuitJsonToInputProblem(circuitJson, {
+    layer: "inner1",
+    source_net_name: "GND",
+    pad_margin: 0,
+    trace_margin: 0,
+    board_edge_margin: 0,
+  })
+  expect(input.pads).toHaveLength(1)
+  expect(input.pads[0]).toMatchObject({
+    shape: "circle",
+    x: 1,
+    y: -1,
+    radius,
+    layer: "inner1",
+  })
+  const output = new CopperPourPipelineSolver(input).getOutput()
+  const { minimum } = await measureClearance(
+    output.brep_shapes[0]!.inner_rings![0]!.vertices,
+    radius,
+  )
+  expect(
+    runSolverAndRenderToSvg(
+      circuitJson,
+      {
+        layer: "inner1",
+        net_name: "GND",
+        pad_margin: 0,
+        trace_margin: 0,
+        board_edge_margin: 0,
+      },
+      (solved) =>
+        renderPcbLayers(
+          solved,
+          `inner1: radius ${radius} mm; nearest copper ${minimum.toFixed(6)} mm (expected >= ${radius}).`,
+        ),
+    ),
+  ).toMatchSvgSnapshot(import.meta.path, snapshotName)
+  expect(minimum).toBeGreaterThanOrEqual(radius - 1e-6)
+}
+
 test.failing("copper stays outside a 0.5 mm circular keepout", async () => {
   const circuit = new Circuit()
   circuit.add(
@@ -48,34 +96,11 @@ test.failing("copper stays outside a 0.5 mm circular keepout", async () => {
     </board>,
   )
   await circuit.renderUntilSettled()
-  const circuitJson = circuit.getCircuitJson()
-  expect(circuitJson.find((e) => e.type === "pcb_keepout")).toMatchObject({
-    shape: "circle",
-    center: { x: 1, y: -1 },
-    radius: 0.5,
-    layers: ["inner1"],
-  })
-  const input = convertCircuitJsonToInputProblem(circuitJson, {
-    layer: "inner1",
-    source_net_name: "GND",
-    pad_margin: 0,
-    trace_margin: 0,
-    board_edge_margin: 0,
-  })
-  expect(input.pads).toHaveLength(1)
-  expect(input.pads[0]).toMatchObject({
-    shape: "circle",
-    x: 1,
-    y: -1,
-    radius: 0.5,
-    layer: "inner1",
-  })
-  const output = new CopperPourPipelineSolver(input).getOutput()
-  const { minimum } = await measureClearance(
-    output.brep_shapes[0]!.inner_rings![0]!.vertices,
+  await checkClearance(
+    circuit.getCircuitJson(),
     0.5,
+    "circular-keepout-0-pcb-layers",
   )
-  expect(minimum).toBeGreaterThanOrEqual(0.5 - 1e-6)
 })
 
 test.failing("copper stays outside a 4 mm circular keepout", async () => {
@@ -93,32 +118,9 @@ test.failing("copper stays outside a 4 mm circular keepout", async () => {
     </board>,
   )
   await circuit.renderUntilSettled()
-  const circuitJson = circuit.getCircuitJson()
-  expect(circuitJson.find((e) => e.type === "pcb_keepout")).toMatchObject({
-    shape: "circle",
-    center: { x: 1, y: -1 },
-    radius: 4,
-    layers: ["inner1"],
-  })
-  const input = convertCircuitJsonToInputProblem(circuitJson, {
-    layer: "inner1",
-    source_net_name: "GND",
-    pad_margin: 0,
-    trace_margin: 0,
-    board_edge_margin: 0,
-  })
-  expect(input.pads).toHaveLength(1)
-  expect(input.pads[0]).toMatchObject({
-    shape: "circle",
-    x: 1,
-    y: -1,
-    radius: 4,
-    layer: "inner1",
-  })
-  const output = new CopperPourPipelineSolver(input).getOutput()
-  const { minimum } = await measureClearance(
-    output.brep_shapes[0]!.inner_rings![0]!.vertices,
+  await checkClearance(
+    circuit.getCircuitJson(),
     4,
+    "circular-keepout-1-pcb-layers",
   )
-  expect(minimum).toBeGreaterThanOrEqual(4 - 1e-6)
 })
