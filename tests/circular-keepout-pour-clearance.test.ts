@@ -52,13 +52,8 @@ test("copper stays outside the entire declared circular keepout", async () => {
     const polygon = ring.map((point) => `${point.x},${-point.y}`).join(" ")
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500"><rect width="800" height="500" fill="white"/><g font-family="sans-serif" font-size="17" fill="#222" text-anchor="middle"><text x="400" y="30">The copper-pour solver cuts keepouts out of PCB copper.</text><text x="400" y="60">Radius ${radius} mm; nearest copper edge ${minimum.toFixed(6)} mm. Expected at least ${radius}.</text></g><g transform="translate(360 290) scale(32)"><rect x="-6" y="-6" width="12" height="12" fill="#ca8e48"/><polygon points="${polygon}" fill="white"/><circle cx="1" cy="1" r="${radius}" fill="none" stroke="#bf3030" stroke-width="0.025"/></g></svg>`
     snapshots.push(svg)
-    if (process.env.EVIDENCE_DIR) {
-      await Bun.write(`${process.env.EVIDENCE_DIR}/radius-${radius}.svg`, svg)
-      await Bun.write(
-        `${process.env.EVIDENCE_DIR}/radius-${radius}.json`,
-        JSON.stringify({ input, output, minimum }),
-      )
-    }
+    if (process.env.SNAPSHOT_DIR)
+      await Bun.write(`${process.env.SNAPSHOT_DIR}/radius-${radius}.svg`, svg)
   }
   for (const { radius, minimum } of minima)
     expect(minimum).toBeGreaterThanOrEqual(radius - 1e-6)
