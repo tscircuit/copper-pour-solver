@@ -1,0 +1,22 @@
+bun test v1.3.14 (0d9b296a)
+
+tests/circular-keepout-pour-clearance.test.ts:
+57 |         JSON.stringify({ input, output, minimum }),
+58 |       )
+59 |     }
+60 |   }
+61 |   for (const { radius, minimum } of minima)
+62 |     expect(minimum).toBeGreaterThanOrEqual(radius - 1e-6)
+                         ^
+error: expect(received).toBeGreaterThanOrEqual(expected)
+
+Expected: >= 0.499999
+Received: 0.49759212643092054
+
+      at <anonymous> (/Users/ankan/Documents/Codex/2026-10-11/tsx-saved-route-bug-reproductions/work/pour/tests/circular-keepout-pour-clearance.test.ts:62:21)
+(fail) copper stays outside the entire declared circular keepout [6.16ms]
+
+ 0 pass
+ 1 fail
+ 1 expect() calls
+Ran 1 test across 1 file. [128.00ms]
