@@ -78,30 +78,15 @@ export const processObstaclesForPour = (
       "processObstacles.boardOutline",
     )
 
-    // Add clearance shapes at vertices
-    for (let i = 0; i < vertices.length; i++) {
-      const p1 = vertices[i === 0 ? vertices.length - 1 : i - 1]
-      const p2 = vertices[i]
-      const p3 = vertices[(i + 1) % vertices.length]
-
-      if (!p1 || !p2 || !p3) continue
-
-      const v1 = { x: p2.x - p1.x, y: p2.y - p1.y }
-      const v2 = { x: p3.x - p2.x, y: p3.y - p2.y }
-      const crossProduct = v1.x * v2.y - v1.y * v2.x
-
-      polygonsToSubtract.push(circleToPolygon(p2, board_edge_margin))
-
-      if (crossProduct < 0) {
-        polygonsToSubtract.push(
-          boxToPolygon(
-            p2.x - board_edge_margin,
-            p2.y - board_edge_margin,
-            p2.x + board_edge_margin,
-            p2.y + board_edge_margin,
-          ),
-        )
-      }
+    // Round clearance at each vertex. The polygon circumscribes the circle so
+    // concave corners never get less than board_edge_margin, and the result
+    // does not depend on the outline winding.
+    const vertexSegments = 32
+    const vertexRadius = board_edge_margin / Math.cos(Math.PI / vertexSegments)
+    for (const vertex of vertices) {
+      polygonsToSubtract.push(
+        circleToPolygon(vertex, vertexRadius, vertexSegments),
+      )
     }
 
     // Add rectangles for each segment to create clearance along edges
