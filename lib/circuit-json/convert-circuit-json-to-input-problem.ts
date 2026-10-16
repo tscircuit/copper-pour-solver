@@ -329,18 +329,38 @@ export const convertCircuitJsonToInputProblem = (
     } else if (elm.type === "pcb_cutout") {
       const cutout = elm as any
       if (cutout.shape === "rect") {
-        pads.push({
-          shape: "rect",
-          padId: cutout.pcb_cutout_id,
-          layer: options.layer, // through-all
-          connectivityKey: `cutout:${cutout.pcb_cutout_id}`,
-          bounds: {
-            minX: cutout.center.x - cutout.width / 2,
-            minY: cutout.center.y - cutout.height / 2,
-            maxX: cutout.center.x + cutout.width / 2,
-            maxY: cutout.center.y + cutout.height / 2,
-          },
-        } as InputRectPad)
+        const rotation = (((cutout.rotation ?? 0) % 360) + 360) % 360
+        const quarterTurns = Math.round(rotation / 90)
+        const isAxisAligned = Math.abs(rotation - quarterTurns * 90) < 1e-6
+        if (isAxisAligned) {
+          const isSwapped = quarterTurns % 2 === 1
+          const halfWidth = (isSwapped ? cutout.height : cutout.width) / 2
+          const halfHeight = (isSwapped ? cutout.width : cutout.height) / 2
+          pads.push({
+            shape: "rect",
+            padId: cutout.pcb_cutout_id,
+            layer: options.layer, // through-all
+            connectivityKey: `cutout:${cutout.pcb_cutout_id}`,
+            bounds: {
+              minX: cutout.center.x - halfWidth,
+              minY: cutout.center.y - halfHeight,
+              maxX: cutout.center.x + halfWidth,
+              maxY: cutout.center.y + halfHeight,
+            },
+          } as InputRectPad)
+        } else {
+          pads.push({
+            shape: "rotated_rect",
+            padId: cutout.pcb_cutout_id,
+            layer: options.layer, // through-all
+            connectivityKey: `cutout:${cutout.pcb_cutout_id}`,
+            x: cutout.center.x,
+            y: cutout.center.y,
+            width: cutout.width,
+            height: cutout.height,
+            ccwRotation: rotation,
+          } as InputRotatedRectPad)
+        }
       } else if (cutout.shape === "circle") {
         pads.push({
           shape: "circle",
