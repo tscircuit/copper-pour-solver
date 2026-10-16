@@ -315,6 +315,22 @@ export const convertCircuitJsonToInputProblem = (
         })
         continue
       }
+      if (hole.hole_shape === "square") {
+        const halfSize = hole.hole_diameter / 2
+        pads.push({
+          shape: "rect",
+          padId: hole.pcb_hole_id,
+          layer: options.layer,
+          connectivityKey: `hole:${hole.pcb_hole_id}`,
+          bounds: {
+            minX: hole.x - halfSize,
+            minY: hole.y - halfSize,
+            maxX: hole.x + halfSize,
+            maxY: hole.y + halfSize,
+          },
+        })
+        continue
+      }
       if (hole.hole_shape !== "circle") continue
 
       pads.push({
