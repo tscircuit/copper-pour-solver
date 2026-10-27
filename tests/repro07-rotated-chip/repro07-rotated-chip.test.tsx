@@ -1,3 +1,4 @@
+import { createElement } from "react"
 import { expect, test } from "bun:test"
 import { Circuit } from "@tscircuit/core"
 import {
@@ -32,16 +33,16 @@ for (const rotation of [0, 45, 90, 180, 270]) {
           pcbRotation={rotation}
           footprint={
             <footprint>
-              {localPads.map((pad, i) => (
-                <smtpad
-                  {...{ key: i }}
-                  shape="circle"
-                  radius={radius}
-                  pcbX={pad.x}
-                  pcbY={pad.y}
-                  portHints={[`pin${i + 1}`]}
-                />
-              ))}
+              {localPads.map((pad, i) =>
+                createElement("smtpad", {
+                  key: i,
+                  shape: "circle",
+                  radius,
+                  pcbX: pad.x,
+                  pcbY: pad.y,
+                  portHints: [`pin${i + 1}`],
+                }),
+              )}
             </footprint>
           }
         />
