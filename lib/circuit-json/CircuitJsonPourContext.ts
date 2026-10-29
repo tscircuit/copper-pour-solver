@@ -1,7 +1,9 @@
-import type { PcbBoard } from "circuit-json"
+import type { LayerRef, PcbBoard } from "circuit-json"
+import type { InputPad } from "lib/types"
 import type { buildSubcircuitConnectivityLookup } from "./buildSubcircuitConnectivityLookup"
 
 export interface CircuitJsonPourContext {
+  padsByLayer: Map<LayerRef, InputPad[]>
   pcb_board: PcbBoard
   subcircuitConnectivityMap: ReturnType<
     typeof buildSubcircuitConnectivityLookup

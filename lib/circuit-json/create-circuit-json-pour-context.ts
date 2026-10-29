@@ -13,6 +13,7 @@ export function createCircuitJsonPourContext(params: {
   const globalConnectivityMap =
     getFullConnectivityMapFromCircuitJson(circuitJson)
   return {
+    padsByLayer: new Map(),
     pcb_board,
     subcircuitConnectivityMap: buildSubcircuitConnectivityLookup(
       circuitJson,
