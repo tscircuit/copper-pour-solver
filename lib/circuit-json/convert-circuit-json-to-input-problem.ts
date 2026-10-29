@@ -33,7 +33,7 @@ export const convertCircuitJsonToInputProblem = (
       subcircuit_id: subcircuitId,
     })
     const inputProblems = optionsOrOptions.map((options) =>
-      convertPourWithContext({ circuitJson, options }, context),
+      convertPourWithContext(options, context),
     )
     const padsByLayerAndId = new Map<LayerPadKey, InputPad>()
     for (const inputProblem of inputProblems) {
@@ -51,7 +51,7 @@ export const convertCircuitJsonToInputProblem = (
   }
 
   return convertPourWithContext(
-    { circuitJson, options: optionsOrOptions },
+    optionsOrOptions,
     createCircuitJsonPourContext({
       circuitJson,
       subcircuit_id: optionsOrOptions.subcircuit_id,
@@ -60,23 +60,13 @@ export const convertCircuitJsonToInputProblem = (
 }
 
 function convertPourWithContext(
-  {
-    circuitJson,
-    options,
-  }: {
-    circuitJson: AnyCircuitElement[]
-    options: ConvertCircuitJsonToInputProblemOptions
-  },
+  options: ConvertCircuitJsonToInputProblemOptions,
   context: CircuitJsonPourContext,
 ): InputProblem {
-  const { pcb_board, subcircuitConnectivityMap } = context
-  const pourConnectivityKey = resolvePourConnectivityKey(
-    circuitJson,
-    options,
-    subcircuitConnectivityMap,
-  )
+  const { pcb_board } = context
+  const pourConnectivityKey = resolvePourConnectivityKey(options, context)
 
-  const pads = getPadsForLayer({ circuitJson, layer: options.layer }, context)
+  const pads = getPadsForLayer({ layer: options.layer }, context)
 
   const { width, height, center } = pcb_board
   const boardBounds =

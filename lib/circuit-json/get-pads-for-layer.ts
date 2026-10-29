@@ -1,5 +1,4 @@
 import type {
-  AnyCircuitElement,
   LayerRef,
   PCBKeepout,
   PcbPlatedHole,
@@ -29,13 +28,13 @@ import {
 } from "transformation-matrix"
 
 export function getPadsForLayer(
-  { circuitJson, layer }: { circuitJson: AnyCircuitElement[]; layer: LayerRef },
+  { layer }: { layer: LayerRef },
   context: CircuitJsonPourContext,
 ): InputPad[] {
   const cachedPads = context.padsByLayer.get(layer)
   if (cachedPads) return cachedPads
-  const { getSubcircuitConnectivityKeyForId } =
-    context.subcircuitConnectivityMap
+  const { circuitJson, subcircuitConnectivityMap } = context
+  const { getSubcircuitConnectivityKeyForId } = subcircuitConnectivityMap
   const pads: InputPad[] = []
 
   for (const elm of circuitJson) {

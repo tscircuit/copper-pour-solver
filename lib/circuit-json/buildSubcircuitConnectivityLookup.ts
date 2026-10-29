@@ -69,13 +69,17 @@ const getDescendantSubcircuitIds = (
   return descendantSubcircuitIds
 }
 
-export const buildSubcircuitConnectivityLookup = (
-  circuitJson: AnyCircuitElement[],
+export const buildSubcircuitConnectivityLookup = ({
+  circuitJson,
+  globalConnectivityMap,
+  rootSubcircuitId,
+}: {
+  circuitJson: AnyCircuitElement[]
   globalConnectivityMap: ReturnType<
     typeof getFullConnectivityMapFromCircuitJson
-  >,
-  rootSubcircuitId?: string,
-) => {
+  >
+  rootSubcircuitId?: string
+}) => {
   const descendantSubcircuitIds = getDescendantSubcircuitIds(
     circuitJson,
     rootSubcircuitId,

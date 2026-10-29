@@ -1,15 +1,10 @@
-import type { AnyCircuitElement, SourceNet } from "circuit-json"
-import type { buildSubcircuitConnectivityLookup } from "./buildSubcircuitConnectivityLookup"
+import type { SourceNet } from "circuit-json"
+import type { CircuitJsonPourContext } from "./CircuitJsonPourContext"
 import type { ConvertCircuitJsonToInputProblemOptions } from "./ConvertCircuitJsonToInputProblemOptions"
 
-type SubcircuitConnectivityLookup = ReturnType<
-  typeof buildSubcircuitConnectivityLookup
->
-
 export const resolvePourConnectivityKey = (
-  circuitJson: AnyCircuitElement[],
   options: ConvertCircuitJsonToInputProblemOptions,
-  subcircuitConnectivityMap: SubcircuitConnectivityLookup,
+  { circuitJson, subcircuitConnectivityMap }: CircuitJsonPourContext,
 ): string => {
   if (options.subcircuit_connectivity_map_key) {
     return subcircuitConnectivityMap.resolveSubcircuitConnectivityKey(
