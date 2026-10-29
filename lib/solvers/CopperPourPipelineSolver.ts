@@ -4,6 +4,8 @@ import type { InputProblem, PipelineOutput } from "lib/types"
 import { applyCrosshatch } from "./copper-pour/apply-crosshatch"
 import { generateBRep } from "./copper-pour/generate-brep"
 import { getBoardPolygon } from "./copper-pour/get-board-polygon"
+import { getInputPadBounds } from "./copper-pour/get-input-pad-bounds"
+import { getPadsOverlappingRegion } from "./copper-pour/get-pads-overlapping-region"
 import {
   crossSectionToCopperPourIslands,
   intersectCrossSections,
@@ -41,6 +43,10 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
       pourMargin: number
       section: ReturnType<typeof subtractBlockersFromPour>
     }> = []
+    const boundedPads = this.input.pads.map((pad) => ({
+      pad,
+      bounds: getInputPadBounds(pad),
+    }))
 
     // Later regions have higher priority, matching declaration/draw order.
     for (
@@ -51,9 +57,7 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
       const region = this.input.regionsForPour[regionIndex]!
       const boardPolygon = getBoardPolygon(region)
 
-      const padsForLayer = this.input.pads.filter(
-        (p) => p.layer === region.layer,
-      )
+      const padsForLayer = getPadsOverlappingRegion({ boundedPads, region })
 
       const pourMargins = {
         padMargin: region.padMargin,
