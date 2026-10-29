@@ -1,14 +1,12 @@
 import type {
   AnyCircuitElement,
   PCBKeepout,
-  PcbBoard,
   PcbPlatedHole,
   PcbSmtPad,
   PcbTrace,
   PcbVia,
   Point,
 } from "circuit-json"
-import { getFullConnectivityMapFromCircuitJson } from "circuit-json-to-connectivity-map"
 import type {
   InputCircularPad,
   InputOvalPad,
@@ -20,9 +18,12 @@ import type {
   InputRotatedRectPad,
   InputTracePad,
 } from "lib/types"
-import { buildSubcircuitConnectivityLookup } from "./buildSubcircuitConnectivityLookup"
+import type { CircuitJsonPourContext } from "./CircuitJsonPourContext"
+import { createCircuitJsonPourContext } from "./create-circuit-json-pour-context"
 import type { ConvertCircuitJsonToInputProblemOptions } from "./ConvertCircuitJsonToInputProblemOptions"
 import { resolvePourConnectivityKey } from "./resolvePourConnectivityKey"
+
+type LayerPadKey = string
 
 export const convertCircuitJsonToInputProblem = (
   circuitJson: AnyCircuitElement[],
@@ -44,10 +45,14 @@ export const convertCircuitJsonToInputProblem = (
       )
     }
 
+    const context = createCircuitJsonPourContext({
+      circuitJson,
+      subcircuit_id: subcircuitId,
+    })
     const inputProblems = optionsOrOptions.map((options) =>
-      convertCircuitJsonToInputProblem(circuitJson, options),
+      convertPourWithContext({ circuitJson, options }, context),
     )
-    const padsByLayerAndId = new Map<string, InputPad>()
+    const padsByLayerAndId = new Map<LayerPadKey, InputPad>()
     for (const inputProblem of inputProblems) {
       for (const pad of inputProblem.pads) {
         padsByLayerAndId.set(`${pad.layer}:${pad.padId}`, pad)
@@ -62,20 +67,25 @@ export const convertCircuitJsonToInputProblem = (
     }
   }
 
-  const options = optionsOrOptions
-  const pcb_board = circuitJson.find((e) => e.type === "pcb_board") as
-    | PcbBoard
-    | undefined
-
-  if (!pcb_board) throw new Error("No pcb_board found in circuit json")
-
-  const globalConnectivityMap =
-    getFullConnectivityMapFromCircuitJson(circuitJson)
-  const subcircuitConnectivityMap = buildSubcircuitConnectivityLookup(
-    circuitJson,
-    globalConnectivityMap,
-    options.subcircuit_id,
+  return convertPourWithContext(
+    { circuitJson, options: optionsOrOptions },
+    createCircuitJsonPourContext({
+      circuitJson,
+      subcircuit_id: optionsOrOptions.subcircuit_id,
+    }),
   )
+}
+
+function convertPourWithContext(
+  {
+    circuitJson,
+    options,
+  }: {
+    circuitJson: AnyCircuitElement[]
+    options: ConvertCircuitJsonToInputProblemOptions
+  },
+  { pcb_board, subcircuitConnectivityMap }: CircuitJsonPourContext,
+): InputProblem {
   const pourConnectivityKey = resolvePourConnectivityKey(
     circuitJson,
     options,
