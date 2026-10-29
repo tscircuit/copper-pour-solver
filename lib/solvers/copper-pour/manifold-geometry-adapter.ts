@@ -1,4 +1,5 @@
 import type { FillRule } from "@tscircuit/manifold-2d"
+import { releaseCrossSections } from "./release-cross-sections"
 import {
   getCrossSection,
   runManifoldOperation,
@@ -86,12 +87,15 @@ export const offsetPolygon = (
     scaledPolygons,
     () => CrossSection.ofPolygons(scaledPolygons, "Positive"),
   )
-  const offset = runManifoldOperation(
-    "offsetPolygon.offset",
-    scaledPolygons,
-    () => section.offset(scaledMargin, joinType, 2, 32),
-  )
-  return fromScaledManifoldPolygons(offset.toPolygons())
+  let offset: CrossSection | undefined
+  try {
+    offset = runManifoldOperation("offsetPolygon.offset", scaledPolygons, () =>
+      section.offset(scaledMargin, joinType, 2, 32),
+    )
+    return fromScaledManifoldPolygons(offset.toPolygons())
+  } finally {
+    releaseCrossSections([section, offset])
+  }
 }
 
 export const offsetCrossSection = (
@@ -123,13 +127,17 @@ export const subtractCrossSectionBlockers = (
   blockerSections: CrossSection[],
 ): CrossSection => {
   const blockerSection = composeCrossSections(blockerSections)
-  if (pourSection.isEmpty() || blockerSection.isEmpty()) return pourSection
+  try {
+    if (pourSection.isEmpty() || blockerSection.isEmpty()) return pourSection
 
-  return runManifoldOperation(
-    "subtractCrossSectionBlockers",
-    [...pourSection.toPolygons(), ...blockerSection.toPolygons()],
-    () => pourSection.subtract(blockerSection),
-  )
+    return runManifoldOperation(
+      "subtractCrossSectionBlockers",
+      [...pourSection.toPolygons(), ...blockerSection.toPolygons()],
+      () => pourSection.subtract(blockerSection),
+    )
+  } finally {
+    blockerSection.delete()
+  }
 }
 
 export const subtractBlockersFromPour = (
@@ -137,25 +145,37 @@ export const subtractBlockersFromPour = (
   blockerPolygons: PolygonRing[],
 ): CrossSection => {
   const pourSection = crossSectionFromPolygon(pourPolygon)
-  const blockerSection = crossSectionFromPolygons(blockerPolygons)
+  const ownedSections = [pourSection]
+  let result: CrossSection | undefined
+  try {
+    const blockerSection = crossSectionFromPolygons(blockerPolygons)
+    ownedSections.push(blockerSection)
 
-  if (pourSection.isEmpty() || blockerSection.isEmpty()) {
-    return pourSection
+    if (pourSection.isEmpty() || blockerSection.isEmpty()) {
+      result = pourSection
+      return pourSection
+    }
+
+    const operationPolygons = [
+      ...toScaledManifoldPolygons(
+        [pourPolygon],
+        "subtractBlockersFromPour.pour",
+      ),
+      ...toScaledManifoldPolygons(
+        blockerPolygons,
+        "subtractBlockersFromPour.blockers",
+      ),
+    ]
+
+    result = runManifoldOperation(
+      "subtractBlockersFromPour",
+      operationPolygons,
+      () => pourSection.subtract(blockerSection),
+    )
+    return result
+  } finally {
+    releaseCrossSections(ownedSections, result)
   }
-
-  const operationPolygons = [
-    ...toScaledManifoldPolygons([pourPolygon], "subtractBlockersFromPour.pour"),
-    ...toScaledManifoldPolygons(
-      blockerPolygons,
-      "subtractBlockersFromPour.blockers",
-    ),
-  ]
-
-  return runManifoldOperation(
-    "subtractBlockersFromPour",
-    operationPolygons,
-    () => pourSection.subtract(blockerSection),
-  )
 }
 
 export const removeTinyIslands = (
@@ -166,34 +186,41 @@ export const removeTinyIslands = (
 
   const minScaledArea =
     minArea * MANIFOLD_GEOMETRY_SCALE * MANIFOLD_GEOMETRY_SCALE
-  const islands = section
-    .decompose()
-    .filter((island) => Math.abs(island.area()) >= minScaledArea)
-
-  return composeCrossSections(islands)
+  const islands = section.decompose()
+  try {
+    return composeCrossSections(
+      islands.filter((island) => Math.abs(island.area()) >= minScaledArea),
+    )
+  } finally {
+    releaseCrossSections(islands)
+  }
 }
 
 export const crossSectionToCopperPourIslands = (
   section: CrossSection,
 ): CopperPourIsland[] => {
   const islands: CopperPourIsland[] = []
+  const nativeIslands = section.decompose()
+  try {
+    for (const island of nativeIslands) {
+      const rings = fromScaledManifoldPolygons(island.toPolygons())
+      if (rings.length === 0) continue
 
-  for (const island of section.decompose()) {
-    const rings = fromScaledManifoldPolygons(island.toPolygons())
-    if (rings.length === 0) continue
+      const outerRing = rings.reduce((largest, ring) =>
+        Math.abs(signedArea(ring)) > Math.abs(signedArea(largest))
+          ? ring
+          : largest,
+      )
+      const innerRings = rings.filter((ring) => ring !== outerRing)
 
-    const outerRing = rings.reduce((largest, ring) =>
-      Math.abs(signedArea(ring)) > Math.abs(signedArea(largest))
-        ? ring
-        : largest,
-    )
-    const innerRings = rings.filter((ring) => ring !== outerRing)
+      islands.push({
+        outerRing,
+        innerRings,
+      })
+    }
 
-    islands.push({
-      outerRing,
-      innerRings,
-    })
+    return islands
+  } finally {
+    releaseCrossSections(nativeIslands)
   }
-
-  return islands
 }
