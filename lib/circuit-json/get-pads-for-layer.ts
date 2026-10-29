@@ -21,6 +21,12 @@ import {
   type TracePadGroup,
 } from "./commit-trace-pad-group"
 import type { CircuitJsonPourContext } from "./CircuitJsonPourContext"
+import {
+  applyToPoint,
+  compose,
+  rotateDEG,
+  translate,
+} from "transformation-matrix"
 
 export function getPadsForLayer(
   { circuitJson, layer }: { circuitJson: AnyCircuitElement[]; layer: LayerRef },
@@ -118,20 +124,19 @@ export function getPadsForLayer(
       }
 
       if (platedHole.shape === "hole_with_polygon_pad") {
-        const ccwRotationRadians =
-          ((platedHole.ccw_rotation ?? 0) * Math.PI) / 180
-        const cosRotation = Math.cos(ccwRotationRadians)
-        const sinRotation = Math.sin(ccwRotationRadians)
+        const holeLocalToBoardTransform = compose(
+          translate(platedHole.x, platedHole.y),
+          rotateDEG(platedHole.ccw_rotation ?? 0),
+        )
         pads.push({
           shape: "polygon",
           padId: platedHole.pcb_plated_hole_id,
           layer,
           connectivityKey,
           isPlatedHole: true,
-          points: platedHole.pad_outline.map((vertex) => ({
-            x: platedHole.x + vertex.x * cosRotation - vertex.y * sinRotation,
-            y: platedHole.y + vertex.x * sinRotation + vertex.y * cosRotation,
-          })),
+          points: platedHole.pad_outline.map((vertex) =>
+            applyToPoint(holeLocalToBoardTransform, vertex),
+          ),
         })
       } else if (platedHole.shape === "circle") {
         pads.push({
@@ -386,12 +391,11 @@ export function getPadsForLayer(
           next
         ) {
           const end = next.route_type === "through_pad" ? next.start : next
-          const endLayer =
-            next.route_type === "via"
-              ? next.from_layer
-              : next.route_type === "through_pad"
-                ? next.start_layer
-                : next.layer
+          let endLayer: LayerRef | undefined
+          if (next.route_type === "via") endLayer = next.from_layer
+          else if (next.route_type === "through_pad")
+            endLayer = next.start_layer
+          else endLayer = next.layer
           if (
             endLayer === ri.layer &&
             Math.hypot(end.x - ri.x, end.y - ri.y) > 0
