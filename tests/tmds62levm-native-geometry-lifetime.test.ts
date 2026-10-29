@@ -6,6 +6,15 @@ import {
   convertCircuitJsonToInputProblem,
 } from "lib/index"
 import { getCrossSection } from "lib/solvers/copper-pour/manifold-runtime"
+import type { CrossSection } from "lib/solvers/copper-pour/manifold-runtime"
+
+function isCrossSectionDeleted(section: CrossSection): boolean {
+  if ("isDeleted" in section && typeof section.isDeleted === "function")
+    return section.isDeleted() === true
+  throw new Error(
+    "Expected the native CrossSection handle to expose isDeleted()",
+  )
+}
 
 test("releases native TMDS62LEVM geometry after serializing the pour output", async () => {
   const fixture = Bun.file(
@@ -22,7 +31,6 @@ test("releases native TMDS62LEVM geometry after serializing the pour output", as
   })
   const CrossSection = getCrossSection()
   const constructors = spyOn(CrossSection, "ofPolygons")
-  const deletions = spyOn(CrossSection.prototype, "delete")
   try {
     const output = new CopperPourPipelineSolver(problem).getOutput()
     expect(output.brep_shapes.length).toBeGreaterThan(0)
@@ -30,20 +38,12 @@ test("releases native TMDS62LEVM geometry after serializing the pour output", as
       result.type === "return" ? [result.value] : [],
     )
     expect(createdSections.length).toBeGreaterThan(0)
-    expect(
-      createdSections.every((section) =>
-        deletions.mock.contexts.includes(section),
-      ),
-    ).toBe(true)
+    expect(createdSections.every(isCrossSectionDeleted)).toBe(true)
   } finally {
     for (const result of constructors.mock.results) {
-      if (
-        result.type === "return" &&
-        !deletions.mock.contexts.includes(result.value)
-      )
+      if (result.type === "return" && !isCrossSectionDeleted(result.value))
         result.value.delete()
     }
     constructors.mockRestore()
-    deletions.mockRestore()
   }
 }, 120_000)
