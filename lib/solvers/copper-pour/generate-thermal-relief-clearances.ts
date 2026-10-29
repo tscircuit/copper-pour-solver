@@ -23,6 +23,8 @@ import {
   segmentToPolygon,
 } from "./polygon-primitives"
 import { normalizeRing, type PolygonRing } from "./polygon-ring"
+import { releaseCrossSections } from "./release-cross-sections"
+import type { CrossSection } from "./manifold-runtime"
 
 type SupportedThermalReliefPad =
   | InputCircularPad
@@ -191,15 +193,25 @@ export const generateThermalReliefClearances = (
   }
 
   const clearanceSection = crossSectionFromPolygons(clearancePolygons)
-  const connectedCopperSection = crossSectionFromPolygons([
-    ...padPolygons,
-    ...spokes,
-  ])
-  const clearanceWithSpokes = subtractCrossSectionBlockers(clearanceSection, [
-    connectedCopperSection,
-  ])
+  let connectedCopperSection: CrossSection | undefined
+  let clearanceWithSpokes: CrossSection | undefined
+  try {
+    connectedCopperSection = crossSectionFromPolygons([
+      ...padPolygons,
+      ...spokes,
+    ])
+    clearanceWithSpokes = subtractCrossSectionBlockers(clearanceSection, [
+      connectedCopperSection,
+    ])
 
-  return crossSectionToCopperPourIslands(clearanceWithSpokes).map(
-    ({ outerRing }) => outerRing,
-  )
+    return crossSectionToCopperPourIslands(clearanceWithSpokes).map(
+      ({ outerRing }) => outerRing,
+    )
+  } finally {
+    releaseCrossSections([
+      clearanceSection,
+      connectedCopperSection,
+      clearanceWithSpokes,
+    ])
+  }
 }
