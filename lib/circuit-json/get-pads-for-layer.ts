@@ -146,7 +146,8 @@ export function getPadsForLayer(
           isPlatedHole: true,
           x: platedHole.x,
           y: platedHole.y,
-          radius: platedHole.outer_diameter / 2,
+          radius:
+            Math.max(platedHole.outer_diameter, platedHole.hole_diameter) / 2,
         } as InputCircularPad)
       } else if (platedHole.shape === "pill") {
         pads.push({
