@@ -129,7 +129,7 @@ test("new fill reclaims a removed connector's gap while preserving different-net
   ).toBeCloseTo(1)
   expect(
     areaInWindow(output.brep_shapes, { minX: -4.5, maxX: -3.5 }),
-  ).toBeCloseTo(0)
+  ).toBeCloseTo(1)
   expect(
     areaInWindow(output.brep_shapes, { minX: 1.8, maxX: 5.2 }),
   ).toBeCloseTo(0)

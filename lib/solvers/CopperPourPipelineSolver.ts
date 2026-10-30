@@ -116,15 +116,16 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
               return offset
             })
 
-          // Retain existing copper exactly. Other nets need clearance; the same
-          // net needs only subtraction to avoid overlapping duplicate copper.
+          // Same-net copper may overlap, matching normal pour semantics.
+          // Only preserved copper on different nets needs a clearance.
           const existingCopperBlockers = existingCopper
-            .filter((copper) => copper.layer === region.layer)
+            .filter(
+              (copper) =>
+                copper.layer === region.layer &&
+                copper.connectivityKey !== region.connectivityKey,
+            )
             .map((copper) => {
-              const margin =
-                copper.connectivityKey === region.connectivityKey
-                  ? 0
-                  : pourMargin
+              const margin = pourMargin
               const cached = copper.offsetsByMargin.get(margin)
               if (cached) return cached
               const blocker = offsetCrossSection(copper.section, margin)
