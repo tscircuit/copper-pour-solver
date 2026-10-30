@@ -38,7 +38,20 @@ export function getPadsForLayer(
   const pads: InputPad[] = []
 
   for (const elm of circuitJson) {
-    if (elm.type === "pcb_smtpad") {
+    if (elm.type === "pcb_copper_pour" && elm.shape === "polygon") {
+      if (elm.layer !== layer) continue
+      pads.push({
+        shape: "polygon",
+        padId: elm.pcb_copper_pour_id,
+        layer,
+        connectivityKey:
+          (elm.source_net_id &&
+            getSubcircuitConnectivityKeyForId(elm.source_net_id)) ||
+          `unconnected-copper-pour:${elm.pcb_copper_pour_id}`,
+        isCopperPour: true,
+        points: elm.points,
+      })
+    } else if (elm.type === "pcb_smtpad") {
       const smtpad = elm as PcbSmtPad
       if (smtpad.layer !== layer) continue
 

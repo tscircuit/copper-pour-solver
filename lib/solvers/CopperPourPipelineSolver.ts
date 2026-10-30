@@ -7,6 +7,7 @@ import { getBoardPolygon } from "./copper-pour/get-board-polygon"
 import { getInputPadBounds } from "./copper-pour/get-input-pad-bounds"
 import { getPadsOverlappingRegion } from "./copper-pour/get-pads-overlapping-region"
 import {
+  crossSectionFromPolygon,
   crossSectionToCopperPourIslands,
   intersectCrossSections,
   offsetCrossSection,
@@ -45,10 +46,22 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
       pourMargin: number
       section: ReturnType<typeof subtractBlockersFromPour>
     }> = []
-    const boundedPads = this.input.pads.map((pad) => ({
-      pad,
-      bounds: getInputPadBounds(pad),
-    }))
+    const existingCopper = this.input.pads.flatMap((pad) => {
+      if (!pad.isCopperPour || pad.shape !== "polygon") return []
+      return [
+        {
+          layer: pad.layer,
+          connectivityKey: pad.connectivityKey,
+          section: crossSectionFromPolygon(pad.points),
+        },
+      ]
+    })
+    const boundedPads = this.input.pads
+      .filter((pad) => !pad.isCopperPour)
+      .map((pad) => ({
+        pad,
+        bounds: getInputPadBounds(pad),
+      }))
 
     try {
       // Later regions have higher priority, matching declaration/draw order.
@@ -99,6 +112,21 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
               if (offset !== solvedRegion.section) temporarySections.add(offset)
               return offset
             })
+
+          // Retain existing copper exactly. Other nets need clearance; the same
+          // net needs only subtraction to avoid overlapping duplicate copper.
+          const existingCopperBlockers = existingCopper
+            .filter((copper) => copper.layer === region.layer)
+            .map((copper) => {
+              const margin =
+                copper.connectivityKey === region.connectivityKey
+                  ? 0
+                  : pourMargin
+              const blocker = offsetCrossSection(copper.section, margin)
+              if (blocker !== copper.section) temporarySections.add(blocker)
+              return blocker
+            })
+          higherPriorityPourBlockers.push(...existingCopperBlockers)
 
           const pourWithoutComponentObstacles = subtractBlockersFromPour(
             boardPolygon,
@@ -166,7 +194,10 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
         brep_shapes_by_region,
       }
     } finally {
-      releaseCrossSections(solvedRegions.map(({ section }) => section))
+      releaseCrossSections([
+        ...solvedRegions.map(({ section }) => section),
+        ...existingCopper.map(({ section }) => section),
+      ])
     }
   }
 }
