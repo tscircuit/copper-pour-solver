@@ -7,6 +7,7 @@ import { getBoardPolygon } from "./copper-pour/get-board-polygon"
 import { getInputPadBounds } from "./copper-pour/get-input-pad-bounds"
 import { getPadsOverlappingRegion } from "./copper-pour/get-pads-overlapping-region"
 import {
+  crossSectionFromPolygon,
   crossSectionToCopperPourIslands,
   intersectCrossSections,
   offsetCrossSection,
@@ -18,6 +19,8 @@ import { isManifoldGeometryInitialized } from "./copper-pour/manifold-runtime"
 import { processObstaclesForPour } from "./copper-pour/process-obstacles"
 import type { CrossSection } from "./copper-pour/manifold-runtime"
 import { releaseCrossSections } from "./copper-pour/release-cross-sections"
+
+type CopperPourClearanceMm = number
 
 export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
   pipelineDef = []
@@ -45,10 +48,23 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
       pourMargin: number
       section: ReturnType<typeof subtractBlockersFromPour>
     }> = []
-    const boundedPads = this.input.pads.map((pad) => ({
-      pad,
-      bounds: getInputPadBounds(pad),
-    }))
+    const existingCopper = this.input.pads.flatMap((pad) => {
+      if (!pad.isCopperPour || pad.shape !== "polygon") return []
+      return [
+        {
+          layer: pad.layer,
+          connectivityKey: pad.connectivityKey,
+          section: crossSectionFromPolygon(pad.points),
+          offsetsByMargin: new Map<CopperPourClearanceMm, CrossSection>(),
+        },
+      ]
+    })
+    const boundedPads = this.input.pads
+      .filter((pad) => !pad.isCopperPour)
+      .map((pad) => ({
+        pad,
+        bounds: getInputPadBounds(pad),
+      }))
 
     try {
       // Later regions have higher priority, matching declaration/draw order.
@@ -99,6 +115,24 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
               if (offset !== solvedRegion.section) temporarySections.add(offset)
               return offset
             })
+
+          // Same-net copper may overlap, matching normal pour semantics.
+          // Only preserved copper on different nets needs a clearance.
+          const existingCopperBlockers = existingCopper
+            .filter(
+              (copper) =>
+                copper.layer === region.layer &&
+                copper.connectivityKey !== region.connectivityKey,
+            )
+            .map((copper) => {
+              const margin = pourMargin
+              const cached = copper.offsetsByMargin.get(margin)
+              if (cached) return cached
+              const blocker = offsetCrossSection(copper.section, margin)
+              copper.offsetsByMargin.set(margin, blocker)
+              return blocker
+            })
+          higherPriorityPourBlockers.push(...existingCopperBlockers)
 
           const pourWithoutComponentObstacles = subtractBlockersFromPour(
             boardPolygon,
@@ -166,7 +200,13 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
         brep_shapes_by_region,
       }
     } finally {
-      releaseCrossSections(solvedRegions.map(({ section }) => section))
+      releaseCrossSections([
+        ...solvedRegions.map(({ section }) => section),
+        ...existingCopper.flatMap(({ section, offsetsByMargin }) => [
+          section,
+          ...offsetsByMargin.values(),
+        ]),
+      ])
     }
   }
 }

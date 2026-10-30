@@ -45,6 +45,8 @@ export interface BaseInputPad {
   isPlatedHole?: boolean
   /** Identifies SMT pads that can receive thermal reliefs. */
   isSmtPad?: boolean
+  /** Already-rendered polygon copper, retained independently from new fill. */
+  isCopperPour?: boolean
 }
 
 export interface InputRectPad extends BaseInputPad {
