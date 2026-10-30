@@ -20,6 +20,8 @@ import { processObstaclesForPour } from "./copper-pour/process-obstacles"
 import type { CrossSection } from "./copper-pour/manifold-runtime"
 import { releaseCrossSections } from "./copper-pour/release-cross-sections"
 
+type CopperPourClearanceMm = number
+
 export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
   pipelineDef = []
   constructor(public input: InputProblem) {
@@ -53,6 +55,7 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
           layer: pad.layer,
           connectivityKey: pad.connectivityKey,
           section: crossSectionFromPolygon(pad.points),
+          offsetsByMargin: new Map<CopperPourClearanceMm, CrossSection>(),
         },
       ]
     })
@@ -122,8 +125,10 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
                 copper.connectivityKey === region.connectivityKey
                   ? 0
                   : pourMargin
+              const cached = copper.offsetsByMargin.get(margin)
+              if (cached) return cached
               const blocker = offsetCrossSection(copper.section, margin)
-              if (blocker !== copper.section) temporarySections.add(blocker)
+              copper.offsetsByMargin.set(margin, blocker)
               return blocker
             })
           higherPriorityPourBlockers.push(...existingCopperBlockers)
@@ -196,7 +201,10 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
     } finally {
       releaseCrossSections([
         ...solvedRegions.map(({ section }) => section),
-        ...existingCopper.map(({ section }) => section),
+        ...existingCopper.flatMap(({ section, offsetsByMargin }) => [
+          section,
+          ...offsetsByMargin.values(),
+        ]),
       ])
     }
   }
