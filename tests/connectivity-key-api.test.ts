@@ -144,3 +144,56 @@ test("parent subcircuit selection rejects ambiguous child connectivity keys", ()
     ),
   ).toThrow(/multiple subcircuits/)
 })
+
+test("already-scoped pour_connectivity_key and default pill smtpad radius and oval hole rotation are preserved", () => {
+  const inputProblem = convertCircuitJsonToInputProblem(
+    [
+      ...(subcircuitConnectivityScopeCircuitJson as AnyCircuitElement[]),
+      {
+        type: "pcb_smtpad",
+        pcb_smtpad_id: "pcb_smtpad_pill_no_radius",
+        layer: "top",
+        shape: "pill",
+        x: 2,
+        y: 2,
+        width: 0.6,
+        height: 1.4,
+      } as any,
+      {
+        type: "pcb_hole",
+        pcb_hole_id: "pcb_hole_oval_rotated",
+        hole_shape: "oval",
+        x: -2,
+        y: -2,
+        hole_width: 0.8,
+        hole_height: 1.6,
+        ccw_rotation: 45,
+      } as any,
+    ],
+    {
+      layer: "top",
+      subcircuit_id: "subcircuit_child_a",
+      pour_connectivity_key: "subcircuit:subcircuit_child_a:connectivity:net0",
+      pad_margin: 0.2,
+      trace_margin: 0.2,
+    },
+  )
+
+  expect(inputProblem.regionsForPour[0]?.connectivityKey).toBe(
+    "subcircuit:subcircuit_child_a:connectivity:net0",
+  )
+  const pillPad = inputProblem.pads.find(
+    (pad) => pad.padId === "pcb_smtpad_pill_no_radius",
+  )
+  expect(pillPad).toMatchObject({
+    shape: "pill",
+    radius: 0.3,
+  })
+  const ovalHole = inputProblem.pads.find(
+    (pad) => pad.padId === "pcb_hole_oval_rotated",
+  )
+  expect(ovalHole).toMatchObject({
+    shape: "oval",
+    ccwRotation: 45,
+  })
+})

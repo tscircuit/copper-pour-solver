@@ -16,7 +16,10 @@ const getScopedSubcircuitConnectivityKey = (
   subcircuitId: string | undefined,
   subcircuitConnectivityMapKey: string,
 ): string =>
-  subcircuitId
+  subcircuitId &&
+  !subcircuitConnectivityMapKey.startsWith(
+    `subcircuit:${subcircuitId}:connectivity:`,
+  )
     ? `subcircuit:${subcircuitId}:connectivity:${subcircuitConnectivityMapKey}`
     : subcircuitConnectivityMapKey
 
