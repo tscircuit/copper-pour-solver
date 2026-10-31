@@ -145,9 +145,9 @@ export const convertCircuitJsonToInputProblem = (
           y: smtpad.y,
           width: smtpad.width!,
           height: smtpad.height!,
-          radius: smtpad.radius!,
+          radius: smtpad.radius ?? Math.min(smtpad.width!, smtpad.height!) / 2,
           ccwRotation:
-            smtpad.shape === "rotated_pill" ? smtpad.ccw_rotation : 0,
+            smtpad.shape === "rotated_pill" ? (smtpad.ccw_rotation ?? 0) : 0,
         } as InputPillPad)
       } else if (smtpad.shape === "polygon") {
         pads.push({
@@ -311,7 +311,7 @@ export const convertCircuitJsonToInputProblem = (
           y: hole.y,
           width: hole.hole_width,
           height: hole.hole_height,
-          ccwRotation: 0,
+          ccwRotation: (hole as any).ccw_rotation ?? 0,
         })
         continue
       }
