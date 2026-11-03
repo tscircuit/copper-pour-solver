@@ -2,7 +2,9 @@ import type { InputPourRegion } from "lib/types"
 import { normalizeRing, type PolygonRing } from "./polygon-ring"
 
 export const getBoardPolygon = (region: InputPourRegion): PolygonRing => {
-  const board_edge_margin = region.board_edge_margin ?? 0
+  const board_edge_margin = region.isStatic
+    ? 0
+    : (region.board_edge_margin ?? 0)
 
   if (region.outline && region.outline.length > 0) {
     return normalizeRing(region.outline, "getBoardPolygon.outline")

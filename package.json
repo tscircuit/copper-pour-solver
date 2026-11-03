@@ -32,7 +32,7 @@
     "@types/bun": "latest",
     "bun-match-svg": "^0.0.13",
     "calculate-elbow": "0.0.12",
-    "circuit-json": "0.0.525",
+    "circuit-json": "https://pkg.pr.new/circuit-json@4729012",
     "circuit-json-to-connectivity-map": "0.0.33",
     "circuit-to-svg": "^0.0.350",
     "circuit-to-svg-tapers": "npm:circuit-to-svg@0.0.433",

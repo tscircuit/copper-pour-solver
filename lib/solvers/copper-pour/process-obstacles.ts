@@ -9,7 +9,12 @@ import type {
   InputRectPad,
   InputRotatedRectPad,
   InputTracePad,
+  InputCopperPourClearanceRule,
 } from "lib/types"
+import {
+  getCopperObstacleType,
+  resolveCopperClearance,
+} from "./resolve-copper-clearance"
 import { generateThermalReliefClearances } from "./generate-thermal-relief-clearances"
 import { offsetPolygon } from "./manifold-geometry-adapter"
 import {
@@ -52,6 +57,7 @@ export const processObstaclesForPour = (
     use_thermal_reliefs?: boolean
     thermal_relief_spoke_width?: number
     thermal_relief_spoke_count?: number
+    clearanceRules?: InputCopperPourClearanceRule[]
   },
   boardOutline?: Point[],
 ): ProcessedObstacles => {
@@ -140,11 +146,23 @@ export const processObstaclesForPour = (
       pad.connectivityKey.startsWith("hole:") ||
       pad.connectivityKey.startsWith("cutout:")
     const isKeepout = pad.connectivityKey.startsWith("keepout:")
-    const getMargin = (defaultMargin: number) =>
-      isKeepout ? 0 : isHoleOrCutout ? (cutoutMargin ?? 0) : defaultMargin
+    const scopedMargin = resolveCopperClearance({
+      rules: margins.clearanceRules,
+      connectivityKey: pad.connectivityKey,
+      objectType: getCopperObstacleType(pad),
+      fallback: isHoleOrCutout
+        ? (cutoutMargin ?? 0)
+        : pad.shape === "trace" || pad.shape === "tapered_trace"
+          ? traceMargin
+          : padMargin,
+    })
+    const margin = isKeepout
+      ? 0
+      : pad.connectivityKey.startsWith("cutout:")
+        ? (cutoutMargin ?? 0)
+        : scopedMargin
 
     if (isCircularPad(pad)) {
-      const margin = getMargin(padMargin)
       polygonsToSubtract.push(
         circleToPolygon({ x: pad.x, y: pad.y }, pad.radius + margin),
       )
@@ -152,7 +170,6 @@ export const processObstaclesForPour = (
     }
 
     if (isPillPad(pad)) {
-      const margin = getMargin(padMargin)
       polygonsToSubtract.push(
         pillToPolygon(
           { x: pad.x, y: pad.y },
@@ -166,7 +183,6 @@ export const processObstaclesForPour = (
     }
 
     if (isOvalPad(pad)) {
-      const margin = getMargin(padMargin)
       const polygon = ovalToPolygon(
         { x: pad.x, y: pad.y },
         pad.width,
@@ -180,7 +196,6 @@ export const processObstaclesForPour = (
     }
 
     if (isRectPad(pad)) {
-      const margin = getMargin(padMargin)
       const { bounds } = pad
       polygonsToSubtract.push(
         boxToPolygon(
@@ -194,7 +209,6 @@ export const processObstaclesForPour = (
     }
 
     if (isRotatedRectPad(pad)) {
-      const margin = getMargin(padMargin)
       polygonsToSubtract.push(
         rotatedBoxToPolygon(
           { x: pad.x, y: pad.y },
@@ -207,8 +221,6 @@ export const processObstaclesForPour = (
     }
 
     if (isPolygonPad(pad)) {
-      const margin = getMargin(padMargin)
-
       const seen = new Set<string>()
       const uniquePoints = pad.points.filter((p) => {
         const key = `${p.x},${p.y}`
@@ -237,9 +249,7 @@ export const processObstaclesForPour = (
       const polygon = taperedTraceToPolygon(pad)
       if (polygon.length >= 3) {
         polygonsToSubtract.push(
-          ...(traceMargin > 0
-            ? offsetPolygon(polygon, traceMargin)
-            : [polygon]),
+          ...(margin > 0 ? offsetPolygon(polygon, margin) : [polygon]),
         )
       }
       continue
@@ -249,7 +259,7 @@ export const processObstaclesForPour = (
       // Add circles for each vertex
       for (const segment of pad.segments) {
         polygonsToSubtract.push(
-          circleToPolygon(segment, pad.width / 2 + traceMargin),
+          circleToPolygon(segment, pad.width / 2 + margin),
         )
       }
 
@@ -260,11 +270,7 @@ export const processObstaclesForPour = (
 
         if (!p1 || !p2) continue
 
-        const segmentPolygon = segmentToPolygon(
-          p1,
-          p2,
-          pad.width + traceMargin * 2,
-        )
+        const segmentPolygon = segmentToPolygon(p1, p2, pad.width + margin * 2)
         if (segmentPolygon.length > 0) {
           polygonsToSubtract.push(segmentPolygon)
         }

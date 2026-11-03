@@ -1,4 +1,4 @@
-import type { LayerRef, Point } from "circuit-json"
+import type { CopperPourClearanceRule, LayerRef, Point } from "circuit-json"
 
 export interface ConvertCircuitJsonToInputProblemOptions {
   layer: LayerRef
@@ -20,6 +20,8 @@ export interface ConvertCircuitJsonToInputProblemOptions {
   pad_margin: number
   trace_margin: number
   pour_margin?: number
+  clearance_rules?: CopperPourClearanceRule[]
+  is_static?: boolean
   board_edge_margin?: number
   /**
    * Physical PCB boundary used for board_edge_margin when outline is only a

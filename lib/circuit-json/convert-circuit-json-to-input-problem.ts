@@ -413,6 +413,7 @@ export const convertCircuitJsonToInputProblem = (
       pads.push({
         shape: "circle",
         padId: via.pcb_via_id,
+        isVia: true,
         layer: options.layer,
         connectivityKey,
         x: via.x,
@@ -561,6 +562,28 @@ export const convertCircuitJsonToInputProblem = (
       boardOutline,
       outline,
       connectivityKey: pourConnectivityKey,
+      ...(options.is_static ? { isStatic: true } : {}),
+      ...(options.clearance_rules
+        ? {
+            clearanceRules: options.clearance_rules.map((rule) => ({
+              clearance: rule.clearance,
+              objectTypes: rule.object_types,
+              connectivityKeys: rule.source_net_ids?.map((sourceNetId) =>
+                resolvePourConnectivityKey(
+                  circuitJson,
+                  {
+                    layer: options.layer,
+                    subcircuit_id: options.subcircuit_id,
+                    source_net_id: sourceNetId,
+                    pad_margin: options.pad_margin,
+                    trace_margin: options.trace_margin,
+                  },
+                  subcircuitConnectivityMap,
+                ),
+              ),
+            })),
+          }
+        : {}),
       crosshatch: options.crosshatch,
       crosshatchPitch: options.crosshatchPitch,
       crosshatchWidth: options.crosshatchWidth,

@@ -1,5 +1,11 @@
 import type { Bounds, Point } from "@tscircuit/math-utils"
-import type { BRepShape } from "circuit-json"
+import type { BRepShape, CopperPourClearanceObjectType } from "circuit-json"
+
+export interface InputCopperPourClearanceRule {
+  clearance: number
+  connectivityKeys?: string[]
+  objectTypes?: CopperPourClearanceObjectType[]
+}
 
 export interface InputPourRegion {
   shape: "rect"
@@ -27,6 +33,10 @@ export interface InputPourRegion {
   traceMargin: number
   /** Clearance from higher-priority, different-net pour regions. */
   pourMargin?: number
+  /** Ordered foreign-copper clearance exceptions; the first matching rule wins. */
+  clearanceRules?: InputCopperPourClearanceRule[]
+  /** Preserve authored copper without trimming it against other geometry. */
+  isStatic?: boolean
   board_edge_margin?: number
   cutout_margin?: number
   /** Enables thermal reliefs for same-net plated holes and SMT pads. */
@@ -45,6 +55,8 @@ export interface BaseInputPad {
   isPlatedHole?: boolean
   /** Identifies SMT pads that can receive thermal reliefs. */
   isSmtPad?: boolean
+  /** Distinguishes vias from other circular copper when applying clearance rules. */
+  isVia?: boolean
 }
 
 export interface InputRectPad extends BaseInputPad {
