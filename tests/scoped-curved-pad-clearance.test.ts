@@ -25,6 +25,18 @@ test("scoped minimum clearance encloses curved pads between polygon vertices", (
       height: 1,
       ccwRotation: 0,
     },
+    {
+      shape: "pill",
+      padId: "pill",
+      layer: "top",
+      connectivityKey: "HV",
+      x: 0,
+      y: 0,
+      width: 2,
+      height: 1,
+      radius: 0.5,
+      ccwRotation: 0,
+    },
   ]
   for (const pad of pads) {
     const input: InputProblem = {
@@ -46,7 +58,9 @@ test("scoped minimum clearance encloses curved pads between polygon vertices", (
     // Sample the analytic source curve, then measure distance to emitted copper edges.
     for (let angle = 0; angle < 2 * Math.PI; angle += Math.PI / 128) {
       const point = {
-        x: (pad.shape === "circle" ? 0.5 : 1) * Math.cos(angle),
+        x:
+          (pad.shape === "oval" ? 1 : 0.5) * Math.cos(angle) +
+          (pad.shape === "pill" ? 0.5 * Math.sign(Math.cos(angle)) : 0),
         y: 0.5 * Math.sin(angle),
       }
       const gap = Math.min(
