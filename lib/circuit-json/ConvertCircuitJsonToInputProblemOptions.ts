@@ -28,6 +28,8 @@ export interface ConvertCircuitJsonToInputProblemOptions {
    * clipping region, such as one piece of a partitioned same-net pour.
    */
   board_edge_outline?: Point[]
+  /** Physical owning-board boundary in board-world mm (+X right, +Y up), independent of the margin outline. */
+  board_outline?: Point[]
   cutout_margin?: number
   /** Enables thermal reliefs for same-net plated holes and SMT pads. */
   use_thermal_reliefs?: boolean

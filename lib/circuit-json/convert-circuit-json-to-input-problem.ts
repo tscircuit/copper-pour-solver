@@ -537,7 +537,7 @@ export const convertCircuitJsonToInputProblem = (
     )
   }
 
-  let boardOutline = options.board_edge_outline
+  let boardOutline = options.board_outline ?? options.board_edge_outline
   if (!boardOutline?.length) boardOutline = pcb_board.outline
   if (!boardOutline?.length) {
     if (!boardBounds) {
