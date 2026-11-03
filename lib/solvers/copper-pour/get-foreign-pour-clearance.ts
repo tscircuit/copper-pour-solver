@@ -1,5 +1,6 @@
 import type { InputPourRegion } from "lib/types"
 import { resolveCopperClearance } from "./resolve-copper-clearance"
+import { getConservativeClearance } from "./get-conservative-clearance"
 
 export function getForeignPourClearance(
   region: InputPourRegion,
@@ -20,5 +21,9 @@ export function getForeignPourClearance(
       foreignRegion.pourMargin ??
       Math.max(foreignRegion.padMargin, foreignRegion.traceMargin),
   })
-  return Math.max(forward, reverse)
+  const clearance = Math.max(forward, reverse)
+  return region.clearanceRules === undefined &&
+    foreignRegion.clearanceRules === undefined
+    ? clearance
+    : getConservativeClearance({ clearance })
 }

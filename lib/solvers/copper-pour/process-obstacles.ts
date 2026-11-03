@@ -26,6 +26,7 @@ import {
   segmentToPolygon,
 } from "./polygon-primitives"
 import { normalizeRing, type PolygonRing } from "./polygon-ring"
+import { getConservativeClearance } from "./get-conservative-clearance"
 
 interface ProcessedObstacles {
   polygonsToSubtract: PolygonRing[]
@@ -66,12 +67,20 @@ export const processObstaclesForPour = (
   const {
     padMargin,
     traceMargin,
-    board_edge_margin,
+    board_edge_margin: requestedBoardEdgeMargin,
     cutoutMargin,
     use_thermal_reliefs,
     thermal_relief_spoke_width,
     thermal_relief_spoke_count,
   } = margins
+  const board_edge_margin =
+    margins.clearanceRules !== undefined &&
+    requestedBoardEdgeMargin !== undefined
+      ? getConservativeClearance({
+          clearance: requestedBoardEdgeMargin,
+          arcRadius: 0,
+        })
+      : requestedBoardEdgeMargin
 
   if (
     boardOutline &&
@@ -156,11 +165,23 @@ export const processObstaclesForPour = (
           ? traceMargin
           : padMargin,
     })
-    const margin = isKeepout
+    const requestedMargin = isKeepout
       ? 0
       : pad.connectivityKey.startsWith("cutout:")
         ? (cutoutMargin ?? 0)
         : scopedMargin
+    const arcRadius =
+      pad.shape === "circle" || pad.shape === "pill"
+        ? pad.radius
+        : pad.shape === "oval"
+          ? Math.max(pad.width, pad.height) / 2
+          : pad.shape === "trace"
+            ? pad.width / 2
+            : undefined
+    const margin =
+      margins.clearanceRules === undefined
+        ? requestedMargin
+        : getConservativeClearance({ clearance: requestedMargin, arcRadius })
 
     if (isCircularPad(pad)) {
       polygonsToSubtract.push(
