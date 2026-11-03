@@ -235,3 +235,7 @@ export const buildSubcircuitConnectivityLookup = (
     },
   }
 }
+
+export type SubcircuitConnectivityLookup = ReturnType<
+  typeof buildSubcircuitConnectivityLookup
+>

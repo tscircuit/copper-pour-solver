@@ -1,5 +1,4 @@
 import { BasePipelineSolver } from "@tscircuit/solver-utils"
-import { doBoundsOverlap, getBoundsFromPoints } from "@tscircuit/math-utils"
 import type { BRepShape } from "circuit-json"
 import type { InputProblem, PipelineOutput } from "lib/types"
 import { applyCrosshatch } from "./copper-pour/apply-crosshatch"
@@ -55,7 +54,6 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
     for (const regionIndex of regionIndices) {
       const region = this.input.regionsForPour[regionIndex]!
       const boardPolygon = getBoardPolygon(region)
-      const pourBounds = getBoundsFromPoints(boardPolygon)
 
       const padsForLayer = this.input.pads.filter(
         (p) => p.layer === region.layer,
@@ -97,18 +95,7 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
 
       const pourWithoutComponentObstacles = subtractBlockersFromPour(
         boardPolygon,
-        region.isStatic
-          ? []
-          : polygonsToSubtract.filter((polygon) => {
-              // Bounds are board-world mm. Test the already-expanded clearance,
-              // so pads outside the outline can still clear copper inside it.
-              const obstacleBounds = getBoundsFromPoints(polygon)
-              return (
-                !!pourBounds &&
-                !!obstacleBounds &&
-                doBoundsOverlap(pourBounds, obstacleBounds)
-              )
-            }),
+        region.isStatic ? [] : polygonsToSubtract,
       )
       const boardOutline = region.boardOutline ?? region.boardEdgeOutline
       const boardSection =

@@ -1,10 +1,6 @@
 import type { AnyCircuitElement, SourceNet } from "circuit-json"
-import type { buildSubcircuitConnectivityLookup } from "./buildSubcircuitConnectivityLookup"
+import type { SubcircuitConnectivityLookup } from "./buildSubcircuitConnectivityLookup"
 import type { ConvertCircuitJsonToInputProblemOptions } from "./ConvertCircuitJsonToInputProblemOptions"
-
-type SubcircuitConnectivityLookup = ReturnType<
-  typeof buildSubcircuitConnectivityLookup
->
 
 export const resolvePourConnectivityKey = (
   circuitJson: AnyCircuitElement[],
