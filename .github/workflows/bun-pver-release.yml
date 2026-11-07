@@ -93,13 +93,18 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.TSCIRCUIT_BOT_GITHUB_TOKEN }}
 
       - name: Verify the release exists on npm
-        timeout-minutes: 6
+        timeout-minutes: 11
         run: |
+          if timeout 10m bash -e -o pipefail <<'VERIFY'
           package_name="$(node -p "require('./package.json').name")"
           package_version="$(node -p "require('./package.json').version")"
           verification_cache="$(mktemp -d)"
           trap 'rm -rf "$verification_cache"' EXIT
-          for attempt in {1..12}; do
+          echo "Waiting one minute for npm to process the release"
+          sleep 60
+          attempt=0
+          while true; do
+            attempt=$((attempt + 1))
             if published_version="$(npm view "$package_name@$package_version" version \
                 --registry=https://registry.npmjs.org/ --prefer-online \
                 --cache="$verification_cache/$attempt" \
@@ -108,10 +113,14 @@ jobs:
               echo "Verified $package_name@$package_version is available on npm"
               exit 0
             fi
-            echo "Waiting for npm availability (attempt $attempt/12)"
-            if [[ "$attempt" -lt 12 ]]; then sleep 10; fi
+            echo "Release not yet available; checking again in 30 seconds"
+            sleep 30
           done
-          echo "::error::$package_name@$package_version is still unavailable on npm"
+          VERIFY
+          then
+            exit 0
+          fi
+          echo "::error::npm release verification failed or exceeded ten minutes, including the initial wait"
           exit 1
 
       - name: Create Pull Request
