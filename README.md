@@ -56,6 +56,31 @@ required for pour-to-pour clearance because the solver must see every region in
 the same input problem. Array order is the priority order: later pours take
 priority over earlier pours.
 
+## Selecting A Board In A Panel
+
+When Circuit JSON contains multiple `pcb_board` records, set `pcb_board_id` on
+each pour's converter options to select its owning board. The converter uses
+that board's world-space bounds and outline for clipping and board-edge
+clearance. All positions remain in millimetres, +X right and +Y up; selecting a
+board does not translate geometry.
+
+```ts
+const inputProblem = convertCircuitJsonToInputProblem(panelCircuitJson, {
+  pcb_board_id: owningBoard.pcb_board_id,
+  layer: "top",
+  source_net_name: "GND",
+  pad_margin: 0.2,
+  trace_margin: 0.2,
+  board_edge_margin: 0.3,
+})
+```
+
+Each entry in an options array may select its own board. The existing requirement
+that batched pours share a `subcircuit_id` still applies; Core can continue
+solving each board's subcircuit separately while passing the full Circuit JSON.
+Omitting `pcb_board_id` retains first-board selection for existing callers.
+An ID that is not present throws instead of silently using another board.
+
 ## Crosshatched Copper
 
 Set `crosshatch: true` on a converter options object or an `InputPourRegion` to

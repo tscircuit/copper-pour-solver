@@ -25,6 +25,26 @@ test("panel pours use their selected PCB board boundary", async () => {
   }))
   const input = convertCircuitJsonToInputProblem(panelCircuitJson, pourOptions)
   const output = new CopperPourPipelineSolver(input).getOutput()
+  expect(output.brep_shapes_by_region.map((shapes) => shapes.length)).toEqual([
+    1, 1,
+  ])
+  const leftVertices = output.brep_shapes_by_region[0]![0]!.outer_ring.vertices
+  const rightVertices = output.brep_shapes_by_region[1]![0]!.outer_ring.vertices
+  expect(Math.min(...leftVertices.map((point) => point.x))).toBeCloseTo(-13.5)
+  expect(Math.max(...leftVertices.map((point) => point.x))).toBeCloseTo(-4.5)
+  expect(Math.min(...rightVertices.map((point) => point.x))).toBeCloseTo(2.5)
+  expect(Math.max(...rightVertices.map((point) => point.x))).toBeCloseTo(13.5)
+  expect(Math.min(...rightVertices.map((point) => point.y))).toBeCloseTo(-4.5)
+  expect(Math.max(...rightVertices.map((point) => point.y))).toBeCloseTo(4.5)
+  // The chamfer is x + y = 16; emitted copper must clear it by 0.5 mm.
+  expect(
+    Math.max(...rightVertices.map((point) => point.x + point.y)),
+  ).toBeCloseTo(16 - Math.SQRT2 * 0.5, 3)
+  const reversedInput = convertCircuitJsonToInputProblem(
+    [...panelCircuitJson].reverse(),
+    pourOptions,
+  )
+  expect(reversedInput.regionsForPour).toEqual(input.regionsForPour)
   const pours: PcbCopperPourBRep[] = output.brep_shapes_by_region.flatMap(
     (shapes, regionIndex) =>
       shapes.map((brep_shape, shapeIndex) => ({

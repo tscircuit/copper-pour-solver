@@ -1,6 +1,8 @@
-import type { LayerRef, Point } from "circuit-json"
+import type { LayerRef, PcbBoard, Point } from "circuit-json"
 
 export interface ConvertCircuitJsonToInputProblemOptions {
+  /** Select the owning board in panel Circuit JSON; omission selects the first board. */
+  pcb_board_id?: PcbBoard["pcb_board_id"]
   layer: LayerRef
   /** Use a 45-degree mesh; defaults to 0.25mm copper width and 1mm pitch. */
   crosshatch?: boolean

@@ -63,11 +63,20 @@ export const convertCircuitJsonToInputProblem = (
   }
 
   const options = optionsOrOptions
-  const pcb_board = circuitJson.find((e) => e.type === "pcb_board") as
-    | PcbBoard
-    | undefined
+  const pcb_board = circuitJson.find(
+    (element): element is PcbBoard =>
+      element.type === "pcb_board" &&
+      (options.pcb_board_id === undefined ||
+        element.pcb_board_id === options.pcb_board_id),
+  )
 
-  if (!pcb_board) throw new Error("No pcb_board found in circuit json")
+  if (!pcb_board) {
+    throw new Error(
+      options.pcb_board_id === undefined
+        ? "No pcb_board found in circuit json"
+        : "Selected PCB board was not found in circuit JSON",
+    )
+  }
 
   const globalConnectivityMap =
     getFullConnectivityMapFromCircuitJson(circuitJson)
