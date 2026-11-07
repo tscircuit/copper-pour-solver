@@ -93,14 +93,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.TSCIRCUIT_BOT_GITHUB_TOKEN }}
 
       - name: Verify the release exists on npm
+        timeout-minutes: 16
         run: |
           package_name="$(node -p "require('./package.json').name")"
           package_version="$(node -p "require('./package.json').version")"
-          published_version="$(npm view "$package_name@$package_version" version)"
-          if [[ "$published_version" != "$package_version" ]]; then
-            echo "::error::$package_name@$package_version was not published"
-            exit 1
-          fi
+          bash scripts/verify-npm-release.sh "$package_name" "$package_version"
 
       - name: Create Pull Request
         if: inputs.release_tag == '' && steps.npm-release.outputs.unpublished == 'false'
