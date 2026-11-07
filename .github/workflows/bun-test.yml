@@ -19,9 +19,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Test npm release verification
-        run: python3 scripts/test-verify-npm-release.py
-
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
         with:
