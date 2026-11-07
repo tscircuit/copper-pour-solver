@@ -7,7 +7,7 @@ import type {
   InputPolygonPad,
   InputRectPad,
   InputRotatedRectPad,
-} from "lib/types"
+} from "../../types"
 import {
   crossSectionFromPolygons,
   crossSectionToCopperPourIslands,

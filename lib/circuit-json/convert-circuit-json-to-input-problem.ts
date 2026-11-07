@@ -19,7 +19,7 @@ import type {
   InputRectPad,
   InputRotatedRectPad,
   InputTracePad,
-} from "lib/types"
+} from "../types"
 import { buildSubcircuitConnectivityLookup } from "./buildSubcircuitConnectivityLookup"
 import type { ConvertCircuitJsonToInputProblemOptions } from "./ConvertCircuitJsonToInputProblemOptions"
 import { resolvePourConnectivityKey } from "./resolvePourConnectivityKey"
@@ -574,6 +574,10 @@ export const convertCircuitJsonToInputProblem = (
       use_thermal_reliefs: options.use_thermal_reliefs,
       thermal_relief_spoke_width: options.thermal_relief_spoke_width,
       thermal_relief_spoke_count: options.thermal_relief_spoke_count,
+      removeDisconnectedIslands:
+        options.island_removal_mode === 0 ||
+        options.island_removal_mode === "always" ||
+        (options.remove_disconnected_islands ?? false),
     },
   ]
 
