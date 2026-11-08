@@ -1,6 +1,8 @@
 import type { LayerRef, Point } from "circuit-json"
 
 export interface ConvertCircuitJsonToInputProblemOptions {
+  /** Remove islands that do not touch same-net copper on this layer. Defaults to false. */
+  removeFloatingIslands?: boolean
   layer: LayerRef
   /** Use a 45-degree mesh; defaults to 0.25mm copper width and 1mm pitch. */
   crosshatch?: boolean

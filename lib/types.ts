@@ -2,6 +2,8 @@ import type { Bounds, Point } from "@tscircuit/math-utils"
 import type { BRepShape } from "circuit-json"
 
 export interface InputPourRegion {
+  /** Remove islands that do not touch same-net copper on this layer. Defaults to false. */
+  removeFloatingIslands?: boolean
   shape: "rect"
   layer: string
   bounds: Bounds

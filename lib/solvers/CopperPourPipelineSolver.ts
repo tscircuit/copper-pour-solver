@@ -13,6 +13,9 @@ import {
 } from "./copper-pour/manifold-geometry-adapter"
 import { isManifoldGeometryInitialized } from "./copper-pour/manifold-runtime"
 import { processObstaclesForPour } from "./copper-pour/process-obstacles"
+import { getAnchoredPourNetwork } from "./copper-pour/get-anchored-pour-network"
+import { MANIFOLD_GEOMETRY_SCALE } from "./copper-pour/polygon-ring"
+import { DEFAULT_MIN_ISLAND_AREA } from "./copper-pour/manifold-geometry-adapter"
 
 export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
   pipelineDef = []
@@ -35,10 +38,12 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
       () => [],
     )
     const solvedRegions: Array<{
+      regionIndex: number
       layer: string
       connectivityKey: string
       pourMargin: number
       section: ReturnType<typeof subtractBlockersFromPour>
+      finalSection: ReturnType<typeof subtractBlockersFromPour>
     }> = []
 
     // Later regions have higher priority, matching declaration/draw order.
@@ -109,12 +114,60 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
 
       brep_shapes_by_region[regionIndex] = generateBRep(pourIslands)
       solvedRegions.push({
+        regionIndex,
         layer: region.layer,
         connectivityKey: region.connectivityKey,
         pourMargin,
         // Reserve the solid region so lower-priority nets cannot fill hatch openings.
         section: solidPour,
+        finalSection: finalPour,
       })
+    }
+
+    // Filter only after priority and hatch geometry are final. Regions on the
+    // same net/layer may physically connect one another, regardless of order.
+    const processedGroups = new Set<string>()
+    for (const solved of solvedRegions) {
+      const region = this.input.regionsForPour[solved.regionIndex]!
+      if (!region.removeFloatingIslands) continue
+      const key = JSON.stringify([solved.layer, solved.connectivityKey])
+      if (processedGroups.has(key)) continue
+      processedGroups.add(key)
+      const group = solvedRegions.filter(
+        (other) =>
+          other.layer === solved.layer &&
+          other.connectivityKey === solved.connectivityKey,
+      )
+      const network = getAnchoredPourNetwork(
+        group.map((other) => other.finalSection),
+        this.input.pads.filter(
+          (pad) =>
+            pad.layer === solved.layer &&
+            pad.connectivityKey === solved.connectivityKey,
+        ),
+      )
+      for (const member of group) {
+        if (
+          !this.input.regionsForPour[member.regionIndex]!.removeFloatingIslands
+        )
+          continue
+        const islands = member.finalSection.decompose()
+        const connected = islands.filter((island) => {
+          const contact = island.intersect(network)
+          const anchored =
+            Math.abs(contact.area()) >
+            DEFAULT_MIN_ISLAND_AREA * MANIFOLD_GEOMETRY_SCALE ** 2
+          contact.delete()
+          return anchored
+        })
+        // Keep complete original islands, avoiding boolean-rounding changes to
+        // the connected copper while removing the disconnected islands.
+        brep_shapes_by_region[member.regionIndex] = generateBRep(
+          connected.flatMap(crossSectionToCopperPourIslands),
+        )
+        for (const island of islands) island.delete()
+      }
+      network.delete()
     }
 
     return {
