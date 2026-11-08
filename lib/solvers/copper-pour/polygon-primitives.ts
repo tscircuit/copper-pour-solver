@@ -108,6 +108,12 @@ export const segmentToPolygon = (
   }))
 }
 
+export const getPillAxisRotation = (
+  width: number,
+  height: number,
+  ccwRotation: number,
+) => ccwRotation + (height >= width ? 90 : 0)
+
 export const pillToPolygon = (
   center: Point,
   width: number,
@@ -118,11 +124,10 @@ export const pillToPolygon = (
 ): PolygonRing => {
   if (radius <= 0) return []
 
-  const isVertical = height >= width
   const centerlineLength = Math.max(width, height) - 2 * radius
   const halfCenterline = Math.max(0, centerlineLength / 2)
-  const baseAngle = isVertical ? Math.PI / 2 : 0
-  const rotation = baseAngle + (ccwRotation * Math.PI) / 180
+  const rotation =
+    (getPillAxisRotation(width, height, ccwRotation) * Math.PI) / 180
 
   const cosAngle = Math.cos(rotation)
   const sinAngle = Math.sin(rotation)

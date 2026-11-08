@@ -63,11 +63,20 @@ export const convertCircuitJsonToInputProblem = (
   }
 
   const options = optionsOrOptions
-  const pcb_board = circuitJson.find((e) => e.type === "pcb_board") as
-    | PcbBoard
-    | undefined
+  const pcb_board = circuitJson.find(
+    (element): element is PcbBoard =>
+      element.type === "pcb_board" &&
+      (options.pcb_board_id === undefined ||
+        element.pcb_board_id === options.pcb_board_id),
+  )
 
-  if (!pcb_board) throw new Error("No pcb_board found in circuit json")
+  if (!pcb_board) {
+    throw new Error(
+      options.pcb_board_id === undefined
+        ? "No pcb_board found in circuit json"
+        : "Selected PCB board was not found in circuit JSON",
+    )
+  }
 
   const globalConnectivityMap =
     getFullConnectivityMapFromCircuitJson(circuitJson)
@@ -138,6 +147,7 @@ export const convertCircuitJsonToInputProblem = (
         pads.push({
           shape: "pill",
           padId: smtpad.pcb_smtpad_id,
+          pcbComponentId: smtpad.pcb_component_id,
           layer: smtpad.layer,
           connectivityKey,
           isSmtPad: true,
@@ -327,8 +337,22 @@ export const convertCircuitJsonToInputProblem = (
         radius: hole.hole_diameter / 2,
       } as InputCircularPad)
     } else if (elm.type === "pcb_cutout") {
-      const cutout = elm as any
+      const cutout = elm
       if (cutout.shape === "rect") {
+        if (cutout.rotation) {
+          pads.push({
+            shape: "rotated_rect",
+            padId: cutout.pcb_cutout_id,
+            layer: options.layer,
+            connectivityKey: `cutout:${cutout.pcb_cutout_id}`,
+            x: cutout.center.x,
+            y: cutout.center.y,
+            width: cutout.width,
+            height: cutout.height,
+            ccwRotation: cutout.rotation,
+          })
+          continue
+        }
         pads.push({
           shape: "rect",
           padId: cutout.pcb_cutout_id,
@@ -407,10 +431,9 @@ export const convertCircuitJsonToInputProblem = (
       } as InputCircularPad)
     } else if (elm.type === "pcb_trace") {
       const trace = elm as PcbTrace
-      const connectivityKey = getSubcircuitConnectivityKeyForId(
-        trace.pcb_trace_id,
-      )
-      if (!connectivityKey) continue
+      const connectivityKey =
+        getSubcircuitConnectivityKeyForId(trace.pcb_trace_id) ??
+        `unconnected-trace:${trace.pcb_trace_id}`
 
       let currentSegmentGroup: Point[] = []
       let currentWidth: number | null = null
@@ -492,6 +515,15 @@ export const convertCircuitJsonToInputProblem = (
   }
 
   const { width, height, center } = pcb_board
+  const boardBounds =
+    width !== undefined && height !== undefined
+      ? {
+          minX: center.x - width / 2,
+          minY: center.y - height / 2,
+          maxX: center.x + width / 2,
+          maxY: center.y + height / 2,
+        }
+      : undefined
 
   // Use pour-specific outline if provided, otherwise fall back to board outline
   const outline = options.outline ?? pcb_board.outline
@@ -506,13 +538,28 @@ export const convertCircuitJsonToInputProblem = (
       maxX: Math.max(...xs),
       maxY: Math.max(...ys),
     }
+  } else if (boardBounds) {
+    bounds = boardBounds
   } else {
-    bounds = {
-      minX: center.x - width! / 2,
-      minY: center.y - height! / 2,
-      maxX: center.x + width! / 2,
-      maxY: center.y + height! / 2,
+    throw new Error(
+      "pcb_board requires width and height when no outline is provided",
+    )
+  }
+
+  let boardOutline = options.board_edge_outline
+  if (!boardOutline?.length) boardOutline = pcb_board.outline
+  if (!boardOutline?.length) {
+    if (!boardBounds) {
+      throw new Error(
+        "pcb_board requires width and height when no outline is provided",
+      )
     }
+    boardOutline = [
+      { x: boardBounds.minX, y: boardBounds.minY },
+      { x: boardBounds.maxX, y: boardBounds.minY },
+      { x: boardBounds.maxX, y: boardBounds.maxY },
+      { x: boardBounds.minX, y: boardBounds.maxY },
+    ]
   }
 
   const regionsForPour = [
@@ -521,6 +568,7 @@ export const convertCircuitJsonToInputProblem = (
       layer: options.layer,
       bounds,
       boardEdgeOutline: options.board_edge_outline,
+      boardOutline,
       outline,
       connectivityKey: pourConnectivityKey,
       removeFloatingIslands: options.removeFloatingIslands,

@@ -27,7 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.release_tag || github.sha }}
+          ref: ${{ inputs.release_tag || 'main' }}
           token: ${{ secrets.TSCIRCUIT_BOT_GITHUB_TOKEN }}
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
@@ -41,10 +41,28 @@ jobs:
       - run: npm install -g pver
       - run: bun install --frozen-lockfile
       - run: bun run build
-      - name: Recover an existing unpublished tag
-        if: inputs.release_tag != ''
+      - name: Check whether the checked-out version is published
+        id: npm-release
+        run: |
+          package_name="$(node -p "require('./package.json').name")"
+          package_version="$(node -p "require('./package.json').version")"
+          echo "version=$package_version" >> "$GITHUB_OUTPUT"
+          status="$(curl --silent --show-error --location --max-time 30 \
+            --output "$RUNNER_TEMP/npm-release.json" --write-out '%{http_code}' \
+            "https://registry.npmjs.org/$package_name/$package_version")"
+          case "$status" in
+            200) echo "unpublished=false" >> "$GITHUB_OUTPUT" ;;
+            404) echo "unpublished=true" >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "::error::Cannot check npm publication status (HTTP $status)"
+              exit 1
+              ;;
+          esac
+
+      - name: Publish the prepared release or recover an existing tag
+        if: inputs.release_tag != '' || steps.npm-release.outputs.unpublished == 'true'
         env:
-          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_TAG: ${{ inputs.release_tag || format('v{0}', steps.npm-release.outputs.version) }}
         run: |
           if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "release_tag must look like v0.0.48"
@@ -59,7 +77,7 @@ jobs:
           fi
 
           package_name="$(node -p "require('./package.json').name")"
-          if npm view "$package_name@$package_version" version >/dev/null 2>&1; then
+          if [[ "${{ steps.npm-release.outputs.unpublished }}" == "false" ]]; then
             echo "$package_name@$package_version is already published"
             exit 0
           fi
@@ -69,13 +87,44 @@ jobs:
           npm publish --access public
 
       - name: Create and publish the next release
-        if: inputs.release_tag == ''
+        if: inputs.release_tag == '' && steps.npm-release.outputs.unpublished == 'false'
         run: pver release --no-push-main
         env:
           GITHUB_TOKEN: ${{ secrets.TSCIRCUIT_BOT_GITHUB_TOKEN }}
 
+      - name: Verify the release exists on npm
+        timeout-minutes: 11
+        run: |
+          if timeout 10m bash -e -o pipefail <<'VERIFY'
+          package_name="$(node -p "require('./package.json').name")"
+          package_version="$(node -p "require('./package.json').version")"
+          verification_cache="$(mktemp -d)"
+          trap 'rm -rf "$verification_cache"' EXIT
+          echo "Waiting one minute for npm to process the release"
+          sleep 60
+          attempt=0
+          while true; do
+            attempt=$((attempt + 1))
+            if published_version="$(npm view "$package_name@$package_version" version \
+                --registry=https://registry.npmjs.org/ --prefer-online \
+                --cache="$verification_cache/$attempt" \
+                --fetch-retries=0 --fetch-timeout=15000)" &&
+                [[ "$published_version" == "$package_version" ]]; then
+              echo "Verified $package_name@$package_version is available on npm"
+              exit 0
+            fi
+            echo "Release not yet available; checking again in 30 seconds"
+            sleep 30
+          done
+          VERIFY
+          then
+            exit 0
+          fi
+          echo "::error::npm release verification failed or exceeded ten minutes, including the initial wait"
+          exit 1
+
       - name: Create Pull Request
-        if: inputs.release_tag == ''
+        if: inputs.release_tag == '' && steps.npm-release.outputs.unpublished == 'false'
         id: create-pr
         uses: peter-evans/create-pull-request@v5
         with:
@@ -89,7 +138,7 @@ jobs:
           author: tscircuitbot <githubbot@tscircuit.com>
 
       - name: Enable auto-merge
-        if: inputs.release_tag == '' && steps.create-pr.outputs.pull-request-number != ''
+        if: inputs.release_tag == '' && steps.npm-release.outputs.unpublished == 'false' && steps.create-pr.outputs.pull-request-number != ''
         run: |
           gh pr merge ${{ steps.create-pr.outputs.pull-request-number }} --auto --squash --delete-branch
         env:
