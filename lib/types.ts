@@ -70,6 +70,8 @@ export interface InputCircularPad extends BaseInputPad {
 
 export interface InputPillPad extends BaseInputPad {
   shape: "pill"
+  /** Owning footprint, used to limit clearance bridges to one component. */
+  pcbComponentId?: string
   x: number
   y: number
   width: number

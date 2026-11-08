@@ -147,6 +147,7 @@ export const convertCircuitJsonToInputProblem = (
         pads.push({
           shape: "pill",
           padId: smtpad.pcb_smtpad_id,
+          pcbComponentId: smtpad.pcb_component_id,
           layer: smtpad.layer,
           connectivityKey,
           isSmtPad: true,
