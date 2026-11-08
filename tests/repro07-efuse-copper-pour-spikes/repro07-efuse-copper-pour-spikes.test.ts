@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import type { AnyCircuitElement } from "circuit-json"
+import type { AnyCircuitElement, Point } from "circuit-json"
 import { convertCircuitJsonToPcbSvg } from "circuit-to-svg"
 import {
   CopperPourPipelineSolver,
@@ -79,8 +79,8 @@ const circuitJson: AnyCircuitElement[] = [
   },
 ]
 
-const getPourInput = (padMargin: number) =>
-  convertCircuitJsonToInputProblem(circuitJson, {
+const getPourInput = (padMargin: number, elements = circuitJson) =>
+  convertCircuitJsonToInputProblem(elements, {
     layer: "top",
     source_net_name: "GND",
     pad_margin: padMargin,
@@ -90,19 +90,21 @@ const getPourInput = (padMargin: number) =>
 const solvePour = (padMargin: number) =>
   new CopperPourPipelineSolver(getPourInput(padMargin)).getOutput().brep_shapes
 
-test("eFuse ground pour follows a straight clearance between adjacent rounded pins", async () => {
-  const brep_shapes = solvePour(0.25)
-  expect(brep_shapes).toHaveLength(1)
-  const [pour] = brep_shapes
-  expect(pour!.inner_rings).toHaveLength(1)
-  const vertices = pour!.inner_rings[0]!.vertices
-  const crossings = vertices.flatMap((start, index) => {
+const getMidpointCrossings = (vertices: Point[]) =>
+  vertices.flatMap((start, index) => {
     const end = vertices[(index + 1) % vertices.length]!
     const startsAboveMidpoint = start.y > 0
     const endsAboveMidpoint = end.y > 0
     if (startsAboveMidpoint === endsAboveMidpoint) return []
     return [start.x - (start.y * (end.x - start.x)) / (end.y - start.y)]
   })
+
+test("eFuse ground pour follows a straight clearance between adjacent rounded pins", async () => {
+  const brep_shapes = solvePour(0.25)
+  expect(brep_shapes).toHaveLength(1)
+  const [pour] = brep_shapes
+  expect(pour!.inner_rings).toHaveLength(1)
+  const crossings = getMidpointCrossings(pour!.inner_rings[0]!.vertices)
 
   // At the midpoint between pins, both edges of the clearance follow the
   // same extent as the capsule ends at the pin centers.
@@ -128,6 +130,46 @@ test("the eFuse pins retain copper between non-overlapping clearances", () => {
   const brep_shapes = solvePour(0.1)
   expect(brep_shapes).toHaveLength(1)
   expect(brep_shapes[0]!.inner_rings).toHaveLength(2)
+})
+
+test("aligned pads on separate footprints keep their individual clearances", () => {
+  const separateFootprints = circuitJson.map((element) =>
+    element.type === "pcb_smtpad" && element.pcb_smtpad_id === "pcb_smtpad_0"
+      ? { ...element, pcb_component_id: "pcb_component_other" }
+      : element,
+  )
+  const input = getPourInput(0.25, separateFootprints)
+  const { brep_shapes } = new CopperPourPipelineSolver(input).getOutput()
+  const crossings = getMidpointCrossings(
+    brep_shapes[0]!.inner_rings[0]!.vertices,
+  )
+  expect(Math.max(...crossings)).toBeCloseTo(-1.443021, 6)
+})
+
+test("the clearance follows a rotated pin row", () => {
+  const rotation = 37.25
+  const angle = (rotation * Math.PI) / 180
+  const cos = Math.cos(angle)
+  const sin = Math.sin(angle)
+  const input = getPourInput(0.25)
+  for (const pad of input.pads) {
+    if (pad.shape !== "pill") continue
+    // Rotate the row about (-2, 0), so it stays inside the test board.
+    const x = pad.x + 2
+    const y = pad.y
+    pad.x = x * cos - y * sin - 2
+    pad.y = x * sin + y * cos
+    pad.ccwRotation += rotation
+  }
+
+  const { brep_shapes } = new CopperPourPipelineSolver(input).getOutput()
+  const vertices = brep_shapes[0]!.inner_rings[0]!.vertices.map(({ x, y }) => ({
+    x: (x + 2) * cos + y * sin - 2,
+    y: -(x + 2) * sin + y * cos,
+  }))
+  const crossings = getMidpointCrossings(vertices)
+  expect(Math.max(...crossings)).toBeCloseTo(-1.349997, 5)
+  expect(Math.min(...crossings)).toBeCloseTo(-2.649995, 5)
 })
 
 test("a same-net pin between two different-net pins interrupts the row", () => {

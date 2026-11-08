@@ -7,18 +7,22 @@ export const bridgePillPadClearances = (
   pourConnectivityKey: string,
   margin: number,
 ): PolygonRing[] => {
-  const padsByRotation = new Map<number, InputPillPad[]>()
+  const rowsByFootprintAndAxis = new Map<
+    string,
+    { axis: number; pads: InputPillPad[] }
+  >()
   for (const pad of pads) {
-    if (!pad.isSmtPad) continue
+    if (!pad.isSmtPad || !pad.pcbComponentId) continue
     const rotation = getPillAxisRotation(pad.width, pad.height, pad.ccwRotation)
     const axis = ((rotation % 180) + 180) % 180
-    const alignedPads = padsByRotation.get(axis) ?? []
-    alignedPads.push(pad)
-    padsByRotation.set(axis, alignedPads)
+    const key = `${axis}:${pad.pcbComponentId}`
+    const group = rowsByFootprintAndAxis.get(key) ?? { axis, pads: [] }
+    group.pads.push(pad)
+    rowsByFootprintAndAxis.set(key, group)
   }
 
   const bridges: PolygonRing[] = []
-  for (const [axis, alignedPads] of padsByRotation) {
+  for (const { axis, pads: alignedPads } of rowsByFootprintAndAxis.values()) {
     const angle = (axis * Math.PI) / 180
     const cos = Math.cos(angle)
     const sin = Math.sin(angle)
@@ -61,7 +65,8 @@ export const bridgePillPadClearances = (
           Math.max(neighbor.width, neighbor.height) === length &&
           pitch > 2 * pad.radius
         ) {
-          // Join the common tangents of the overlapping clearance capsules.
+          // Together with the two capsules, this rectangle forms their convex
+          // hull. The added area removes the teeth at the overlapping end caps.
           bridges.push(
             rotatedBoxToPolygon(
               { x: (pad.x + neighbor.x) / 2, y: (pad.y + neighbor.y) / 2 },
