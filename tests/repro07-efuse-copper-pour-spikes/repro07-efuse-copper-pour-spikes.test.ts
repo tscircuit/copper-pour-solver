@@ -79,23 +79,35 @@ const circuitJson: AnyCircuitElement[] = [
   },
 ]
 
-test("eFuse ground pour forms a spike between adjacent rounded pin clearances", async () => {
-  const input = convertCircuitJsonToInputProblem(circuitJson, {
+const getPourInput = (padMargin: number) =>
+  convertCircuitJsonToInputProblem(circuitJson, {
     layer: "top",
     source_net_name: "GND",
-    pad_margin: 0.25,
+    pad_margin: padMargin,
     trace_margin: 0.25,
   })
-  const { brep_shapes } = new CopperPourPipelineSolver(input).getOutput()
+
+const solvePour = (padMargin: number) =>
+  new CopperPourPipelineSolver(getPourInput(padMargin)).getOutput().brep_shapes
+
+test("eFuse ground pour follows a straight clearance between adjacent rounded pins", async () => {
+  const brep_shapes = solvePour(0.25)
   expect(brep_shapes).toHaveLength(1)
   const [pour] = brep_shapes
   expect(pour!.inner_rings).toHaveLength(1)
   const vertices = pour!.inner_rings[0]!.vertices
-  const betweenPins = vertices.find((point) => point.x > -2 && point.y === 0)
+  const crossings = vertices.flatMap((start, index) => {
+    const end = vertices[(index + 1) % vertices.length]!
+    const startsAboveMidpoint = start.y > 0
+    const endsAboveMidpoint = end.y > 0
+    if (startsAboveMidpoint === endsAboveMidpoint) return []
+    return [start.x - (start.y * (end.x - start.x)) / (end.y - start.y)]
+  })
 
-  // The clearance reaches x = -1.35 at each pin center, but its union dips
-  // back between the pins, leaving a ~0.093 mm copper tooth outside the EP.
-  expect(betweenPins?.x).toBeCloseTo(-1.443021, 5)
+  // At the midpoint between pins, both edges of the clearance follow the
+  // same extent as the capsule ends at the pin centers.
+  expect(Math.max(...crossings)).toBeCloseTo(-1.349997, 6)
+  expect(Math.min(...crossings)).toBeCloseTo(-2.649995, 6)
 
   const svg = convertCircuitJsonToPcbSvg([
     ...circuitJson,
@@ -110,4 +122,30 @@ test("eFuse ground pour forms a spike between adjacent rounded pin clearances", 
     },
   ])
   await expect(svg).toMatchSvgSnapshot(import.meta.path)
+})
+
+test("the eFuse pins retain copper between non-overlapping clearances", () => {
+  const brep_shapes = solvePour(0.1)
+  expect(brep_shapes).toHaveLength(1)
+  expect(brep_shapes[0]!.inner_rings).toHaveLength(2)
+})
+
+test("a same-net pin between two different-net pins interrupts the row", () => {
+  const input = getPourInput(0.25)
+  const [first, second] = input.pads.filter((pad) => pad.shape === "pill")
+  first!.y = -0.375
+  second!.y = 0.375
+  input.pads.push({
+    ...first!,
+    padId: "pcb_smtpad_ground_between_pins",
+    y: 0,
+    connectivityKey: input.regionsForPour[0]!.connectivityKey,
+  })
+
+  const { brep_shapes } = new CopperPourPipelineSolver(input).getOutput()
+  const vertices = brep_shapes[0]!.inner_rings[0]!.vertices
+  const clearanceBetweenPins = vertices.find(
+    (point) => point.x > -2 && point.y === 0,
+  )
+  expect(clearanceBetweenPins?.x).toBeLessThan(-1.6)
 })

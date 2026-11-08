@@ -10,6 +10,7 @@ import type {
   InputRotatedRectPad,
   InputTracePad,
 } from "lib/types"
+import { bridgePillPadClearances } from "./bridge-pill-pad-clearances"
 import { generateThermalReliefClearances } from "./generate-thermal-relief-clearances"
 import { offsetPolygon } from "./manifold-geometry-adapter"
 import {
@@ -270,6 +271,16 @@ export const processObstaclesForPour = (
         }
       }
     }
+  }
+
+  if (pourConnectivityKey !== undefined && padMargin > 0) {
+    polygonsToSubtract.push(
+      ...bridgePillPadClearances(
+        pads.filter(isPillPad),
+        pourConnectivityKey,
+        padMargin,
+      ),
+    )
   }
 
   return {
