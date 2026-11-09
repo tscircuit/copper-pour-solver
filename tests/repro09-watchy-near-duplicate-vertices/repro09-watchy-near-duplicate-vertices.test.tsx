@@ -7,7 +7,7 @@ import {
 import { convertCircuitJsonToPcbSvg } from "circuit-to-svg"
 import { runSolverAndRenderToSvg } from "../utils/run-solver-and-render-to-svg"
 
-test("Watchy trace clearance leaves a near-duplicate vertex that crashes distance calculations", async () => {
+test("Watchy trace clearance supports distance calculations without near-duplicate vertices", async () => {
   const r1Position = { x: 6.5, y: -9 }
   const circuit = new Circuit()
   circuit.pcbRoutingDisabled = true
@@ -80,7 +80,7 @@ test("Watchy trace clearance leaves a near-duplicate vertex that crashes distanc
         color="#ffffff"
       />
       <pcbnotetext
-        text="Duplicate vertices at this corner"
+        text="Redundant corner vertices removed"
         pcbX={0.3}
         pcbY={-6.5}
         fontSize={0.28}
@@ -152,8 +152,8 @@ test("Watchy trace clearance leaves a near-duplicate vertex that crashes distanc
         distanceError = error.message
       }
 
-      expect(shortestEdge.length).toBe(7.105427357601002e-15)
-      expect(distanceError).toBe("Illegal Parameters")
+      expect(scaledEdge.start.equalTo(scaledEdge.end)).toBe(false)
+      expect(distanceError).toBeUndefined()
 
       const labeledCircuitJson = solvedCircuitJson.map((element) => {
         if (element.type !== "pcb_note_text") return element

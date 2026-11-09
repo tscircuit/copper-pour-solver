@@ -179,7 +179,9 @@ export const crossSectionToCopperPourIslands = (
   const islands: CopperPourIsland[] = []
 
   for (const island of section.decompose()) {
-    const rings = fromScaledManifoldPolygons(island.toPolygons())
+    // Manifold's default simplification tolerance is 1e-6 in scaled coordinates
+    // (1e-12 mm). Remove redundant vertices before exporting the clipped rings.
+    const rings = fromScaledManifoldPolygons(island.simplify().toPolygons())
     if (rings.length === 0) continue
 
     const outerRing = rings.reduce((largest, ring) =>
