@@ -53,6 +53,8 @@ const assertFinitePoint = (point: Point, operation: string) => {
 
 const pointsEqual = (a: Point, b: Point) => a.x === b.x && a.y === b.y
 
+// Preserve coordinates on both sides of clipping: snapping a ring can move
+// copper inside its clearance boundary. Manifold handles clipping precision.
 export const normalizeRing = (
   ring: PolygonRing,
   operation = "normalizeRing",
@@ -61,15 +63,9 @@ export const normalizeRing = (
 
   for (const point of ring) {
     assertFinitePoint(point, operation)
-    const roundedPoint = {
-      x:
-        Math.round(point.x * MANIFOLD_GEOMETRY_SCALE) / MANIFOLD_GEOMETRY_SCALE,
-      y:
-        Math.round(point.y * MANIFOLD_GEOMETRY_SCALE) / MANIFOLD_GEOMETRY_SCALE,
-    }
     const previous = normalized[normalized.length - 1]
-    if (!previous || !pointsEqual(previous, roundedPoint)) {
-      normalized.push(roundedPoint)
+    if (!previous || !pointsEqual(previous, point)) {
+      normalized.push({ x: point.x, y: point.y })
     }
   }
 
@@ -101,8 +97,8 @@ export const toScaledManifoldPolygons = (
       signedArea(normalized) < 0 ? [...normalized].reverse() : normalized
     scaledPolygons.push(
       positiveRing.map((p) => [
-        Math.round(p.x * MANIFOLD_GEOMETRY_SCALE),
-        Math.round(p.y * MANIFOLD_GEOMETRY_SCALE),
+        p.x * MANIFOLD_GEOMETRY_SCALE,
+        p.y * MANIFOLD_GEOMETRY_SCALE,
       ]),
     )
   }

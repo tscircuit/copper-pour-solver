@@ -44,7 +44,7 @@ test("polygon board copper pour respects the requested edge clearance", async ()
     },
     (solvedCircuitJson) => {
       const clearanceErrors = checkCopperToBoardEdgeClearance(solvedCircuitJson)
-      expect(clearanceErrors).toHaveLength(1)
+      expect(clearanceErrors).toEqual([])
       const pour = solvedCircuitJson.find(
         (element) => element.type === "pcb_copper_pour",
       )
@@ -62,8 +62,7 @@ test("polygon board copper pour respects the requested edge clearance", async ()
           ),
         ),
       )
-      expect(minimumClearance).toBeCloseTo(0.19999892247629383, 12)
-      expect(minimumClearance).toBeLessThan(0.2 - 1e-9)
+      expect(minimumClearance).toBeGreaterThanOrEqual(0.2 - 1e-9)
       const labeledCircuitJson = solvedCircuitJson.map((element) =>
         element.type === "pcb_note_text" &&
         element.text === "Measured edge clearance"
