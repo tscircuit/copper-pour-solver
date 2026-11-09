@@ -1,56 +1,68 @@
 import { expect, test } from "bun:test"
 import { Circuit } from "@tscircuit/core"
-import { getPourPolygon, getSmtPadPolygon } from "@tscircuit/circuit-json-util"
+import {
+  getPourPolygon,
+  getTraceSegmentPolygon,
+} from "@tscircuit/circuit-json-util"
 import { convertCircuitJsonToPcbSvg } from "circuit-to-svg"
 import { runSolverAndRenderToSvg } from "../utils/run-solver-and-render-to-svg"
 
 test("Watchy trace clearance leaves a near-duplicate vertex that crashes distance calculations", async () => {
+  const r1Position = { x: 6.5, y: -9 }
   const circuit = new Circuit()
+  circuit.pcbRoutingDisabled = true
   circuit.add(
     <board
       outline={[
-        { x: -2.5, y: -9.5 },
-        { x: 7, y: -9.5 },
-        { x: 7, y: -2.5 },
-        { x: -2.5, y: -2.5 },
+        { x: -3, y: -11 },
+        { x: 9, y: -11 },
+        { x: 9, y: -1 },
+        { x: -3, y: -1 },
       ]}
     >
       <net name="GND" isGroundNet />
       <net name="SIGNAL" />
-      {/* Keep the coordinates from Watchy's failing trace: rounding hides the defect. */}
-      <testpoint
-        name="TP1"
-        pcbX={4.795609}
-        pcbY={-7.454296974643502}
-        connections={{ pin1: "net.SIGNAL" }}
-        footprint={
-          <footprint>
-            <smtpad shape="circle" radius={0.05} portHints={["pin1"]} />
-          </footprint>
-        }
+      <resistor
+        name="R1"
+        resistance="1k"
+        footprint="0603"
+        pcbX={r1Position.x}
+        pcbY={r1Position.y}
+        connections={{ pin1: "net.SIGNAL", pin2: "net.GND" }}
       />
-      <testpoint
-        name="TP2"
+      <resistor
+        name="R2"
+        resistance="1k"
+        footprint="0603"
         pcbX={4.795609}
-        pcbY={-4.76493975}
-        connections={{ pin1: "net.SIGNAL" }}
-        footprint={
-          <footprint>
-            <smtpad shape="circle" radius={0.05} portHints={["pin1"]} />
-          </footprint>
-        }
+        pcbY={-3.4}
+        connections={{ pin1: "net.SIGNAL", pin2: "net.GND" }}
       />
+      {/* Preserve Watchy's corner in board coordinates; pcbPath is relative to R1. */}
       <trace
-        from=".TP1 > .pin1"
-        to=".TP2 > .pin1"
+        from=".R1 > .pin1"
+        to=".R2 > .pin1"
         thickness={0.15}
-        pcbPath={[".TP1 > .pin1", ".TP2 > .pin1"]}
+        pcbPathRelativeTo=".R1 > .pin1"
+        pcbPath={[
+          ".R1 > .pin1",
+          { x: 4.795609 - r1Position.x, y: -7.454296974643502 - r1Position.y },
+          { x: 4.795609 - r1Position.x, y: -4.76493975 - r1Position.y },
+          ".R2 > .pin1",
+        ]}
       />
       <pcbnotetext
         text="Watchy trace clearance corner"
-        pcbX={2.25}
-        pcbY={-3.1}
+        pcbX={3}
+        pcbY={-1.7}
         fontSize={0.4}
+        color="#ffffff"
+      />
+      <pcbnotetext
+        text="GND copper pour"
+        pcbX={0}
+        pcbY={-3.7}
+        fontSize={0.3}
         color="#ffffff"
       />
       <pcbnotetext
@@ -68,7 +80,7 @@ test("Watchy trace clearance leaves a near-duplicate vertex that crashes distanc
         color="#ffffff"
       />
       <pcbnotetext
-        text="Rectangle meets round end cap"
+        text="Duplicate vertices at this corner"
         pcbX={0.3}
         pcbY={-6.5}
         fontSize={0.28}
@@ -84,15 +96,15 @@ test("Watchy trace clearance leaves a near-duplicate vertex that crashes distanc
       />
       <pcbnotetext
         text="Shortest pour edge"
-        pcbX={2.25}
-        pcbY={-8.5}
+        pcbX={3}
+        pcbY={-10}
         fontSize={0.3}
         color="#ffffff"
       />
       <pcbnotetext
         text="Distance calculation"
-        pcbX={2.25}
-        pcbY={-9}
+        pcbX={3}
+        pcbY={-10.5}
         fontSize={0.3}
       />
     </board>,
@@ -109,26 +121,32 @@ test("Watchy trace clearance leaves a near-duplicate vertex that crashes distanc
       board_edge_margin: 0.3,
     },
     (solvedCircuitJson) => {
-      const pour = solvedCircuitJson.find(
-        (element) => element.type === "pcb_copper_pour",
+      const pourEdges = solvedCircuitJson
+        .filter((element) => element.type === "pcb_copper_pour")
+        .flatMap((pour) => [...getPourPolygon(pour).edges])
+      const trace = solvedCircuitJson.find(
+        (element) => element.type === "pcb_trace",
       )!
-      const pad = solvedCircuitJson.find(
-        (element) => element.type === "pcb_smtpad",
+      const wirePoints = trace.route.filter(
+        (point) => point.route_type === "wire",
+      )
+      const start = wirePoints[0]!
+      const end = wirePoints.find(
+        (point) => point.x !== start.x || point.y !== start.y,
       )!
-      const polygon = getPourPolygon(pour)
-      const shortestEdge = [...polygon.edges].reduce((shortest, edge) =>
+      const shortestEdge = pourEdges.reduce((shortest, edge) =>
         edge.length < shortest.length ? edge : shortest,
       )
       // Core scales by 1e6 before copperPolygonsTouch calls Flatten's distance code.
       const geometryScale = 1e6
       const scaledEdge = shortestEdge.shape.scale(geometryScale, geometryScale)
-      const scaledPad = getSmtPadPolygon(pad).scale(
+      const scaledTrace = getTraceSegmentPolygon(start, end, start.width).scale(
         geometryScale,
         geometryScale,
       )
       let distanceError: string | undefined
       try {
-        scaledEdge.distanceTo(scaledPad)
+        scaledEdge.distanceTo(scaledTrace)
       } catch (error) {
         if (!(error instanceof Error)) throw error
         distanceError = error.message
