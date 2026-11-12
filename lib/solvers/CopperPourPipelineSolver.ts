@@ -1,6 +1,6 @@
 import { BasePipelineSolver } from "@tscircuit/solver-utils"
 import type { BRepShape } from "circuit-json"
-import type { InputProblem, PipelineOutput } from "lib/types"
+import type { InputProblem, PipelineOutput } from "../types"
 import { applyCrosshatch } from "./copper-pour/apply-crosshatch"
 import { generateBRep } from "./copper-pour/generate-brep"
 import { getBoardPolygon } from "./copper-pour/get-board-polygon"
@@ -14,6 +14,7 @@ import {
 } from "./copper-pour/manifold-geometry-adapter"
 import { isManifoldGeometryInitialized } from "./copper-pour/manifold-runtime"
 import { processObstaclesForPour } from "./copper-pour/process-obstacles"
+import { removeDisconnectedIslands } from "./copper-pour/remove-disconnected-islands"
 
 export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
   pipelineDef = []
@@ -32,9 +33,9 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
       )
     }
 
-    const brep_shapes_by_region: BRepShape[][] = this.input.regionsForPour.map(
-      () => [],
-    )
+    const solvedSectionsByRegion: Array<
+      ReturnType<typeof subtractBlockersFromPour>
+    > = []
     const solvedRegions: Array<{
       layer: string
       connectivityKey: string
@@ -117,9 +118,7 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
             higherPriorityPourBlockers,
           })
         : solidPour
-      const pourIslands = crossSectionToCopperPourIslands(finalPour)
-
-      brep_shapes_by_region[regionIndex] = generateBRep(pourIslands)
+      solvedSectionsByRegion[regionIndex] = finalPour
       solvedRegions.push({
         layer: region.layer,
         connectivityKey: region.connectivityKey,
@@ -128,6 +127,15 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
         section: solidPour,
       })
     }
+
+    const filteredSectionsByRegion = removeDisconnectedIslands({
+      regions: this.input.regionsForPour,
+      pads: this.input.pads,
+      sections: solvedSectionsByRegion,
+    })
+    const brep_shapes_by_region: BRepShape[][] = filteredSectionsByRegion.map(
+      (section) => generateBRep(crossSectionToCopperPourIslands(section)),
+    )
 
     return {
       brep_shapes: brep_shapes_by_region.flat(),

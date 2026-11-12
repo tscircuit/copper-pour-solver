@@ -69,6 +69,31 @@ export const composeCrossSections = (
   )
 }
 
+export const unionCrossSections = (sections: CrossSection[]): CrossSection => {
+  const nonEmptySections = sections.filter((section) => !section.isEmpty())
+  const CrossSection = getCrossSection()
+  if (nonEmptySections.length === 0) return emptyCrossSection()
+
+  return runManifoldOperation(
+    "unionCrossSections",
+    nonEmptySections.flatMap((section) => section.toPolygons()),
+    () => CrossSection.union(nonEmptySections),
+  )
+}
+
+export const intersectCrossSections = (
+  first: CrossSection,
+  second: CrossSection,
+): CrossSection => {
+  if (first.isEmpty() || second.isEmpty()) return emptyCrossSection()
+
+  return runManifoldOperation(
+    "intersectCrossSections",
+    [...first.toPolygons(), ...second.toPolygons()],
+    () => first.intersect(second),
+  )
+}
+
 export const offsetPolygon = (
   polygon: PolygonRing,
   margin: number,
@@ -107,16 +132,6 @@ export const offsetCrossSection = (
     section.offset(scaledMargin, joinType, 2, 32),
   )
 }
-
-export const intersectCrossSections = (
-  pourSection: CrossSection,
-  boardSection: CrossSection,
-): CrossSection =>
-  runManifoldOperation(
-    "intersectCrossSections",
-    [...pourSection.toPolygons(), ...boardSection.toPolygons()],
-    () => pourSection.intersect(boardSection),
-  )
 
 export const subtractCrossSectionBlockers = (
   pourSection: CrossSection,
