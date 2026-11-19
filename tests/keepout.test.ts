@@ -83,3 +83,59 @@ test("copper pours are clipped around keepouts on their layer", async () => {
   })
   await expect(svg).toMatchSvgSnapshot(import.meta.path, "keepout")
 })
+
+test("keepouts with allow_copper_pour are ignored by copper pours while false or omitted still clip", () => {
+  const circuitWithPermissions = [
+    ...circuitJson.filter((elm) => elm.type !== "pcb_keepout"),
+    {
+      type: "pcb_keepout",
+      pcb_keepout_id: "pcb_keepout_rect_allowed",
+      shape: "rect",
+      center: { x: -2, y: 0 },
+      width: 2,
+      height: 3,
+      layers: ["top"],
+      allow_copper_pour: true,
+    },
+    {
+      type: "pcb_keepout",
+      pcb_keepout_id: "pcb_keepout_circle_allowed",
+      shape: "circle",
+      center: { x: 2, y: 0 },
+      radius: 1,
+      layers: ["top"],
+      allow_copper_pour: true,
+    },
+    {
+      type: "pcb_keepout",
+      pcb_keepout_id: "pcb_keepout_explicit_disallowed",
+      shape: "rect",
+      center: { x: 0, y: -2 },
+      width: 1.5,
+      height: 1.5,
+      layers: ["top"],
+      allow_copper_pour: false,
+    },
+  ] as unknown as AnyCircuitElement[]
+
+  const inputProblem = convertCircuitJsonToInputProblem(
+    circuitWithPermissions,
+    {
+      layer: "top",
+      source_net_id: "source_net_gnd",
+      pad_margin: 0.2,
+      trace_margin: 0.1,
+    },
+  )
+
+  const keepoutPads = inputProblem.pads.filter((pad) =>
+    pad.connectivityKey.startsWith("keepout:"),
+  )
+  expect(keepoutPads.map((pad) => pad.padId)).toEqual([
+    "pcb_keepout_explicit_disallowed",
+  ])
+
+  const output = new CopperPourPipelineSolver(inputProblem).getOutput()
+  expect(output.brep_shapes).toHaveLength(1)
+  expect(output.brep_shapes[0]!.inner_rings).toHaveLength(1)
+})

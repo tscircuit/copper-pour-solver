@@ -385,7 +385,8 @@ export const convertCircuitJsonToInputProblem = (
         } as InputPolygonPad)
       }
     } else if (elm.type === "pcb_keepout") {
-      const keepout = elm as PCBKeepout
+      const keepout = elm as PCBKeepout & { allow_copper_pour?: boolean }
+      if (keepout.allow_copper_pour) continue
       if (!keepout.layers.includes(options.layer)) continue
 
       if (keepout.shape === "rect") {
