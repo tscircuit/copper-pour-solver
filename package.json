@@ -1,5 +1,6 @@
 {
   "name": "@tscircuit/copper-pour-solver",
+  "license": "MIT",
   "main": "dist/index.js",
   "version": "0.0.73",
   "repository": {
