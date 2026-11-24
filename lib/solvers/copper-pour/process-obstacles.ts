@@ -235,22 +235,22 @@ export const processObstaclesForPour = (
     }
 
     if (pad.shape === "tapered_trace") {
+      const margin = getMargin(traceMargin)
       const polygon = taperedTraceToPolygon(pad)
       if (polygon.length >= 3) {
         polygonsToSubtract.push(
-          ...(traceMargin > 0
-            ? offsetPolygon(polygon, traceMargin)
-            : [polygon]),
+          ...(margin > 0 ? offsetPolygon(polygon, margin) : [polygon]),
         )
       }
       continue
     }
 
     if (isTracePad(pad)) {
+      const margin = getMargin(traceMargin)
       // Add circles for each vertex
       for (const segment of pad.segments) {
         polygonsToSubtract.push(
-          circleToPolygon(segment, pad.width / 2 + traceMargin),
+          circleToPolygon(segment, pad.width / 2 + margin),
         )
       }
 
@@ -261,11 +261,7 @@ export const processObstaclesForPour = (
 
         if (!p1 || !p2) continue
 
-        const segmentPolygon = segmentToPolygon(
-          p1,
-          p2,
-          pad.width + traceMargin * 2,
-        )
+        const segmentPolygon = segmentToPolygon(p1, p2, pad.width + margin * 2)
         if (segmentPolygon.length > 0) {
           polygonsToSubtract.push(segmentPolygon)
         }

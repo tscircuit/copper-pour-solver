@@ -411,6 +411,24 @@ export const convertCircuitJsonToInputProblem = (
           y: keepout.center.y,
           radius: keepout.radius,
         } as InputCircularPad)
+      } else if (keepout.shape === "outline") {
+        if (
+          Number.isFinite(keepout.stroke_width) &&
+          keepout.stroke_width > 0 &&
+          keepout.outline.length >= 2
+        ) {
+          pads.push({
+            shape: "trace",
+            padId: keepout.pcb_keepout_id,
+            layer: options.layer,
+            connectivityKey: `keepout:${keepout.pcb_keepout_id}`,
+            segments: keepout.outline.map((point) => ({
+              x: point.x,
+              y: point.y,
+            })),
+            width: keepout.stroke_width,
+          } as InputTracePad)
+        }
       }
     } else if (elm.type === "pcb_via") {
       const via = elm as PcbVia
