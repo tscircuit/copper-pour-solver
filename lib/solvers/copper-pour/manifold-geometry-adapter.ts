@@ -158,6 +158,23 @@ export const subtractBlockersFromPour = (
   )
 }
 
+export const removeNarrowCopper = (
+  section: CrossSection,
+  minWidth = 0,
+): CrossSection => {
+  if (minWidth <= 0 || section.isEmpty()) return section
+
+  // Keep a bridge exactly at the specified width through integer rounding.
+  const radius = (minWidth * MANIFOLD_GEOMETRY_SCALE) / 2 - 1
+  if (radius <= 0) return section
+  return runManifoldOperation("removeNarrowCopper", section.toPolygons(), () =>
+    section
+      .offset(-radius, "Round", 2, 32)
+      .offset(radius, "Round", 2, 32)
+      .intersect(section),
+  )
+}
+
 export const removeTinyIslands = (
   section: CrossSection,
   minArea = DEFAULT_MIN_ISLAND_AREA,

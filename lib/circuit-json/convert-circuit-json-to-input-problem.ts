@@ -574,6 +574,7 @@ export const convertCircuitJsonToInputProblem = (
       crosshatch: options.crosshatch,
       crosshatchPitch: options.crosshatchPitch,
       crosshatchWidth: options.crosshatchWidth,
+      minWidth: options.minWidth,
       padMargin: options.pad_margin,
       traceMargin: options.trace_margin,
       pourMargin:
