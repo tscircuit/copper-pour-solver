@@ -10,6 +10,8 @@ export interface ConvertCircuitJsonToInputProblemOptions {
   crosshatchPitch?: number
   /** Copper strip and rim width in mm. Defaults to 0.25; must be less than pitch. */
   crosshatchWidth?: number
+  /** Minimum width of solid copper between clearances, in millimetres. */
+  minWidth?: number
   subcircuit_id?: string
   source_net_id?: string
   source_net_name?: string

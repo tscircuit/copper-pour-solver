@@ -8,6 +8,7 @@ import {
   crossSectionToCopperPourIslands,
   intersectCrossSections,
   offsetCrossSection,
+  removeNarrowCopper,
   removeTinyIslands,
   subtractBlockersFromPour,
   subtractCrossSectionBlockers,
@@ -103,8 +104,12 @@ export class CopperPourPipelineSolver extends BasePipelineSolver<InputProblem> {
         ? intersectCrossSections(pourWithoutComponentObstacles, boardSection)
         : pourWithoutComponentObstacles
 
+      const unblockedPour = subtractCrossSectionBlockers(
+        clippedPour,
+        higherPriorityPourBlockers,
+      )
       const solidPour = removeTinyIslands(
-        subtractCrossSectionBlockers(clippedPour, higherPriorityPourBlockers),
+        removeNarrowCopper(unblockedPour, region.minWidth),
       )
       const finalPour = region.crosshatch
         ? applyCrosshatch({

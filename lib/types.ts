@@ -23,6 +23,8 @@ export interface InputPourRegion {
   crosshatchPitch?: number
   /** Copper strip and rim width in mm. Defaults to 0.25; must be less than pitch. */
   crosshatchWidth?: number
+  /** Minimum width of solid copper between clearances, in millimetres. */
+  minWidth?: number
   padMargin: number
   traceMargin: number
   /** Clearance from higher-priority, different-net pour regions. */

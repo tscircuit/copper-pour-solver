@@ -28,10 +28,19 @@ test("a ground pour between two slots respects its minimum copper width", async 
     pad_margin: 0.05,
     minWidth: 0.15,
   }
-  const input = convertCircuitJsonToInputProblem(circuitJson, options)
-  expect(
-    new CopperPourPipelineSolver(input).getOutput().brep_shapes,
-  ).toHaveLength(1)
+  for (const [minWidth, islandCount] of [
+    [0.1, 1],
+    [0.12, 1],
+    [0.15, 2],
+  ] as const) {
+    const input = convertCircuitJsonToInputProblem(circuitJson, {
+      ...options,
+      minWidth,
+    })
+    expect(
+      new CopperPourPipelineSolver(input).getOutput().brep_shapes,
+    ).toHaveLength(islandCount)
+  }
   expect(runSolverAndRenderToSvg(circuitJson, options)).toMatchSvgSnapshot(
     import.meta.path,
   )
